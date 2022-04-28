@@ -1,11 +1,11 @@
 from os.path import join
 
 from app.endpoint import base_dir
-from app.model.file_model import FileModel
+from app.model.file import File
 from PyPDF2 import PdfFileReader
 
 
-class PdfModel(FileModel):
+class Pdf(File):
 
     def iterfile(self):
         file = PdfFileReader(join(base_dir, self.path))

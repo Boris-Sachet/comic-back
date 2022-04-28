@@ -1,9 +1,9 @@
 from zipfile import ZipFile
 
-from app.model.file_model import FileModel
+from app.model.file import File
 
 
-class CbzModel(FileModel):
+class Cbz(File):
     def iterfile(self):
         with ZipFile(self.get_full_path(), 'r') as file:
             for item in file.infolist():

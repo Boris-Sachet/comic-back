@@ -4,8 +4,8 @@ from os.path import isfile, join
 from fastapi import APIRouter
 
 from app.endpoint import base_dir
-from app.model.directory_model import DirectoryModel
-from app.model.file_model import FileModel
+from app.model.directory import Directory
+from app.model.file import File
 
 router = APIRouter(prefix="/dir", tags=["Directory"], responses={404: {"directory": "Not found"}})
 
@@ -15,9 +15,9 @@ def get_dir_content(path: str):
     files = []
     for item in listdir(base_dir + path):
         if isfile(join(base_dir, path, item)):
-            files.append(FileModel(path=join(path, item)))
+            files.append(File(path=join(path, item)))
         else:
-            dirs.append(DirectoryModel(name=item, path=join(path, item)))
+            dirs.append(Directory(path=join(path, item)))
     return dirs, files
 
 
