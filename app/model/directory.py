@@ -1,5 +1,5 @@
 from os.path import basename
-from app.model import TypeModel
+from app.enums.type_model import TypeModel
 
 
 class Directory:

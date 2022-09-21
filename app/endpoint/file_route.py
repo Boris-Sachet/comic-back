@@ -29,7 +29,7 @@ async def stream_file(path: str):
         match pathlib.Path(path).suffix:
             case ".cbz": file = Cbz(path=path)
             case _: raise HTTPException(status_code=415, detail="Unreadable file format")
-        return StreamingResponse(file.iterfile())
+        return StreamingResponse(file)
 
 @router.websocket("/{path}")
 async def stream_file(websocket: WebSocket, path: str):
