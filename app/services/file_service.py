@@ -16,3 +16,11 @@ def find_file(path: str):
             # case ".pdf": return Pdf(path=path)
             case _: return None
     return None
+
+
+def execute_action(file: File, action: str):
+    """Execute the given reading action on the given reading file"""
+    match action:
+        case "+": file.next_page()
+        case "-": file.prev_page()
+        case _: file.set_page(int(action))
