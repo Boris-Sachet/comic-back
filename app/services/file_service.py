@@ -14,6 +14,6 @@ def find_file(path: str):
     if isfile(file_path):
         match pathlib.Path(path).suffix.lower():
             case ".cbz": return Cbz(path=path)
-            case ".pdf": return Pdf(path=path)
+            # case ".pdf": return Pdf(path=path)
             case _: return None
     return None
