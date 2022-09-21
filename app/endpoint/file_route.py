@@ -9,7 +9,7 @@ from app.endpoint import base_dir
 from app.model.file import File
 from starlette.websockets import WebSocket
 
-from app.services.file_service import find_file
+from app.services.file_service import find_file, execute_action
 
 router = APIRouter(prefix="/file", tags=["File"], responses={404: {"file": "Not found"}})
 
@@ -23,6 +23,10 @@ async def get_file(path: str):
 
 @router.websocket("/{path}")
 async def stream_file(websocket: WebSocket, path: str):
+    """Open a new websocket on a file streaming one page at  the time, to control it use:
+        + : next page
+        - : previous page
+        any number : jump top page number (if exist)"""
     resume_token = None
     try:
         await websocket.accept()
@@ -31,10 +35,13 @@ async def stream_file(websocket: WebSocket, path: str):
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
 
-        # Stream the file page by page via the websocket
-        # for image in file.iterfile():
-        for image in file:
-            await websocket.send_bytes(image)
+        # Send current page then await command, execute command then send current page
+        await websocket.send_bytes(file.get_current_page())
+        #TODO send a model with the info of the File object as metadata when opening the file, send another one at each actions to indicate the current page number to avoid confusion
+        while True:
+            action = await websocket.receive_text()
+            execute_action(file, action)
+            await websocket.send_bytes(file.get_current_page())
 
     except ConnectionClosedOK:
         pass
