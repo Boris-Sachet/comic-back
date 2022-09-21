@@ -6,7 +6,6 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from app.endpoint import base_dir
-from app.model.cbz_model import Cbz
 from app.model.directory import Directory
 from app.model.file import File
 

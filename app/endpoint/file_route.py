@@ -6,7 +6,6 @@ from fastapi.responses import FileResponse, StreamingResponse
 from websockets.exceptions import ConnectionClosedOK
 
 from app.endpoint import base_dir
-from app.model.cbz_model import Cbz
 from app.model.file import File
 from starlette.websockets import WebSocket
 
@@ -21,15 +20,6 @@ async def get_file(path: str):
     if isfile(file_path):
         return FileResponse(file_path)
 
-
-@router.get("/stream/{path}", response_class=StreamingResponse)
-async def stream_file(path: str):
-    file_path = join(base_dir, path)
-    if isfile(file_path):
-        match pathlib.Path(path).suffix:
-            case ".cbz": file = Cbz(path=path)
-            case _: raise HTTPException(status_code=415, detail="Unreadable file format")
-        return StreamingResponse(file)
 
 @router.websocket("/{path}")
 async def stream_file(websocket: WebSocket, path: str):
