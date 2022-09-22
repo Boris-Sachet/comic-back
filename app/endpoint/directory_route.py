@@ -7,10 +7,5 @@ router = APIRouter(prefix="/dir", tags=["Directory"], responses={404: {"director
 
 
 @router.get("/", response_class=JSONResponse)
-async def get_root_content():
-    return get_dir_content("")
-
-
-@router.get("/{path}", response_class=JSONResponse)
-async def get_path_content(path: str):
+async def get_path_content(path: str = ""):
     return get_dir_content(path)
