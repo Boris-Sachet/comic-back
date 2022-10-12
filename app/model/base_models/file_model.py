@@ -1,3 +1,4 @@
+from bson import ObjectId
 from pydantic import BaseModel
 
 from app.enums.type_model import TypeModel
@@ -10,6 +11,7 @@ class FileModel(BaseModel):
     type: TypeModel
     pages_count: int
     current_page: int
+    md5: str | None
 
     class Config:
         orm_mode = True
