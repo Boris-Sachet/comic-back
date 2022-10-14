@@ -10,7 +10,7 @@ from rarfile import RarFile, BadRarFile, NotRarFile
 
 from app.endpoint import base_dir
 from app.enums.type_model import TypeModel
-from app.model.base_models.file_model import FileModel, UpdateFileModel
+from app.model.file_model import FileModel, UpdateFileModel
 from app.services.db_service import update_file, find_file_by_full_path, find_file_by_md5, insert_file, find_file
 from app.tools import is_image
 

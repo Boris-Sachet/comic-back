@@ -5,7 +5,7 @@ from typing import Optional, List
 from bson import ObjectId
 from pydantic import BaseModel, Field
 
-from app.model.base_models.py_object_id import PyObjectId
+from app.model.py_object_id import PyObjectId
 
 
 class FileModel(BaseModel):

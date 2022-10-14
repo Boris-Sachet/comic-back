@@ -3,7 +3,7 @@ import pathlib
 from os import listdir
 from os.path import isfile, join
 from app.endpoint import base_dir
-from app.model.base_models.directory_model import DirectoryModel
+from app.model.directory_model import DirectoryModel
 from app.services.file_service import get_file_from_db
 
 LOGGER = logging.getLogger(__name__)

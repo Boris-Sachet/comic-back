@@ -2,7 +2,7 @@ from bson import ObjectId
 from fastapi import HTTPException
 
 from app.database_connect import db
-from app.model.base_models.file_model import FileModel, UpdateFileModel
+from app.model.file_model import FileModel, UpdateFileModel
 from app.services import Collections
 
 
