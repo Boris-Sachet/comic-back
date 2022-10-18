@@ -5,7 +5,7 @@ from websockets.exceptions import ConnectionClosedOK
 
 from starlette.websockets import WebSocket
 
-from app.services.db_service import find_file
+from app.services.db_service import find_file, db_find_library_by_name
 from app.services.file_service import execute_action, get_current_page, get_full_path
 
 router = APIRouter(prefix="/file", tags=["File"], responses={404: {"file": "Not found"}})
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/file", tags=["File"], responses={404: {"file": "Not 
 
 
 @router.websocket("/")
-async def stream_file(websocket: WebSocket, file_id: str):
+async def stream_file(websocket: WebSocket, library_name: str, file_id: str):
     """Open a new websocket on a file streaming one page at  the time, to control it use:
         + : next page
         - : previous page
@@ -27,20 +27,24 @@ async def stream_file(websocket: WebSocket, file_id: str):
     resume_token = None  # TODO Manage resume on error
     try:
         await websocket.accept()
-        file = await find_file(file_id)
+        library = await db_find_library_by_name(library_name)
+        if not library:
+            raise HTTPException(status_code=404, detail="Library not found in database")
+
+        file = await find_file(library_name, file_id)
         if not file:
             raise HTTPException(status_code=404, detail="File not found in database")
 
-        if not isfile(get_full_path(file.full_path)):
+        if not isfile(get_full_path(library.path, file.full_path)):
             raise HTTPException(status_code=404, detail="File not found on storage")
 
         # Send current page then await command, execute command then send current page
-        await websocket.send_bytes(get_current_page(file))
+        await websocket.send_bytes(get_current_page(library.path, file))
         while True:
             action = await websocket.receive_text()
-            file = await execute_action(file, action)
+            file = await execute_action(library_name, file, action)
             await websocket.send_json(file.json())
-            await websocket.send_bytes(get_current_page(file))
+            await websocket.send_bytes(get_current_page(library.path, file))
 
     except ConnectionClosedOK:
         pass

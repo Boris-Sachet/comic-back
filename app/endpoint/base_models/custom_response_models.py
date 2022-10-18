@@ -6,5 +6,5 @@ from app.model.file_model import FileModel
 from app.model.directory_model import DirectoryModel
 
 
-class DirContentResponseModel(BaseModel):
+class LibContentResponseModel(BaseModel):
     __root__: Tuple[List[DirectoryModel], List[FileModel]]
