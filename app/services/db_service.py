@@ -45,49 +45,49 @@ async def db_remove_collection(collection_name: str):
 # =====================
 # FILE SPECIFIC METHODS
 # =====================
-async def find_file(library_name: str, object_id: str) -> FileModel | None:
+async def db_find_file(library_name: str, object_id: str) -> FileModel | None:
     file_dict = await db[library_name].find_one({"_id": ObjectId(object_id)})
     if file_dict is not None:
         return FileModel(**file_dict)
     return None
 
 
-async def find_file_by_full_path(library_name: str, file_path: str) -> FileModel | None:
+async def db_find_file_by_full_path(library_name: str, file_path: str) -> FileModel | None:
     file_dict = await db[library_name].find_one({"full_path": file_path})
     if file_dict is not None:
         return FileModel(**file_dict)
     return None
 
 
-async def find_file_by_md5(library_name: str, md5: str) -> FileModel | None:
+async def db_find_file_by_md5(library_name: str, md5: str) -> FileModel | None:
     file_dict = await db[library_name].find_one({"md5": md5})
     if file_dict is not None:
         return FileModel(**file_dict)
     return None
 
 
-async def insert_file(library_name: str, file: FileModel):
+async def db_insert_file(library_name: str, file: FileModel):
     return await db[library_name].insert_one(file.dict(by_alias=True))
 
 
-async def update_file(library_name: str, object_id: str, file: UpdateFileModel) -> FileModel:
+async def db_update_file(library_name: str, object_id: str, file: UpdateFileModel) -> FileModel:
     file = {key: value for key, value in file.dict().items() if value is not None}
 
     # If there is modifications to do
     if len(file) >= 1:
         update_result = await db[library_name].update_one({"_id": ObjectId(object_id)}, {"$set": file})
         if update_result.modified_count == 1:
-            if (updated_file := await find_file(library_name, object_id)) is not None:
+            if (updated_file := await db_find_file(library_name, object_id)) is not None:
                 return updated_file
 
     # No modification to do or update failed
-    if (file := await find_file(library_name, object_id)) is not None:
+    if (file := await db_find_file(library_name, object_id)) is not None:
         return file
 
     raise HTTPException(status_code=404, detail=f"File {object_id} not found")
 
 
-async def delete_file(library_name: str, object_id: str):
+async def db_delete_file(library_name: str, object_id: str):
     return await db[library_name].delete_one({"_id": ObjectId(object_id)})
 
 

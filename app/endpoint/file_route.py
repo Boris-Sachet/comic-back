@@ -6,7 +6,7 @@ from websockets.exceptions import ConnectionClosedOK
 from starlette.websockets import WebSocket
 
 from app.model.file_model import ResponseFileModel
-from app.services.db_service import find_file, db_find_library_by_name
+from app.services.db_service import db_find_file, db_find_library_by_name
 from app.services.file_service import execute_action, get_current_page, get_full_path
 
 router = APIRouter(prefix="/file", tags=["File"], responses={404: {"file": "Not found"}})
@@ -32,7 +32,7 @@ async def stream_file(websocket: WebSocket, library_name: str, file_id: str):
         if not library:
             raise HTTPException(status_code=404, detail="Library not found in database")
 
-        file = await find_file(library_name, file_id)
+        file = await db_find_file(library_name, file_id)
         if not file:
             raise HTTPException(status_code=404, detail="File not found in database")
 
