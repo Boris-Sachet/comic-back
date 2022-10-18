@@ -66,6 +66,10 @@ async def db_find_file_by_md5(library_name: str, md5: str) -> FileModel | None:
     return None
 
 
+async def db_find_all_files(library_name: str) -> List[dict]:
+    return await db[library_name].find().to_list(None)
+
+
 async def db_insert_file(library_name: str, file: FileModel):
     return await db[library_name].insert_one(file.dict(by_alias=True))
 

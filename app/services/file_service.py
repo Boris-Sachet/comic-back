@@ -2,7 +2,7 @@ import hashlib
 import logging
 import os
 import pathlib
-from os.path import join, splitext, basename
+from os.path import join, splitext, basename, isfile
 from typing import List
 from zipfile import ZipFile, BadZipfile
 
@@ -11,7 +11,8 @@ from rarfile import RarFile, BadRarFile, NotRarFile
 from app.enums.type_model import TypeModel
 from app.model.file_model import FileModel, UpdateFileModel
 from app.model.library_model import LibraryModel
-from app.services.db_service import db_update_file, db_find_file_by_full_path, db_find_file_by_md5, db_insert_file, db_find_file
+from app.services.db_service import db_update_file, db_find_file_by_full_path, db_find_file_by_md5, db_insert_file, \
+    db_find_file, db_find_all_files, db_delete_file
 from app.tools import is_image
 
 LOGGER = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ async def get_file_from_db(library: LibraryModel, file_path: str) -> FileModel:
                 LOGGER.info(f"{file.full_path} : added new entry in database {insert_result.inserted_id}")
                 return await db_find_file(library.name, insert_result.inserted_id)
             else:
+                # TODO Before updating check if old file exist, if yes allow duplicate and create new entry in db
                 # Else update existing entry
                 # WARNING: this will prevent duplicate file from being listed multiple times,
                 # database will only mention last file found by md5
@@ -90,7 +92,21 @@ async def get_file_from_db(library: LibraryModel, file_path: str) -> FileModel:
                 return await db_update_file(library.name, str(db_file.id), file_updated)
 
         except (BadZipfile, BadRarFile, NotRarFile):
-            logging.error(f"Unreadable file : '{file_path}', ignoring file")
+            LOGGER.error(f"Unreadable file : '{file_path}', ignoring file")
+
+
+async def purge_deleted_files(library: LibraryModel):
+    """This method will look at every file reference in database and check if there is an actual file on the
+    corresponding path, if no file is found the database entry is removed.
+    WARNING: This method is designed to be run just after a scan and might remove wrong data if the database is not
+    up-to-date"""
+    LOGGER.debug("File purge started")
+    files = await db_find_all_files(library.name)
+    for file in files:
+        if not isfile(get_full_path(library.path, file["full_path"])):
+            await db_delete_file(library.name, str(file["id"]))
+            LOGGER.info(f"File {file['name']} purged from library {library.name} because no actual file was found")
+    LOGGER.debug("File purge ended")
 
 
 # Pages methods
