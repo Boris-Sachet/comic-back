@@ -6,7 +6,6 @@ from fastapi import HTTPException
 from app.database_connect import db
 from app.model.file_model import FileModel, UpdateFileModel
 from app.model.library_model import LibraryModel, UpdateLibraryModel
-from app.services import Collections
 
 
 # async def search_by_id(object_id: str, collection: Collections):
@@ -88,26 +87,29 @@ async def delete_file(library_name: str, object_id: str):
 # ========================
 # LIBRARY SPECIFIC METHODS
 # ========================
+LIBRARIES = "libraries"
+
+
 async def db_find_library(object_id: str) -> LibraryModel | None:
-    library_dict = await db[Collections.LIBRARIES.value].find_one({"_id": ObjectId(object_id)})
+    library_dict = await db[LIBRARIES].find_one({"_id": ObjectId(object_id)})
     if library_dict is not None:
         return LibraryModel(**library_dict)
     return None
 
 
 async def db_find_library_by_name(name: str) -> LibraryModel | None:
-    library_dict = await db[Collections.LIBRARIES.value].find_one({"name": name})
+    library_dict = await db[LIBRARIES].find_one({"name": name})
     if library_dict is not None:
         return LibraryModel(**library_dict)
     return None
 
 
 async def db_find_all_libraries() -> List[LibraryModel]:
-    return await db[Collections.LIBRARIES.value].find().to_list(None)
+    return await db[LIBRARIES].find().to_list(None)
 
 
 async def db_insert_library(library: LibraryModel):
-    return await db[Collections.LIBRARIES.value].insert_one(library.dict(by_alias=True))
+    return await db[LIBRARIES].insert_one(library.dict(by_alias=True))
 
 
 async def db_update_library(object_id: str, library: UpdateLibraryModel) -> LibraryModel:
@@ -115,7 +117,7 @@ async def db_update_library(object_id: str, library: UpdateLibraryModel) -> Libr
 
     # If there is modifications to do
     if len(library) >= 1:
-        update_result = await db[Collections.LIBRARIES.value].update_one({"_id": ObjectId(object_id)}, {"$set": library})
+        update_result = await db[LIBRARIES].update_one({"_id": ObjectId(object_id)}, {"$set": library})
         if update_result.modified_count == 1:
             if (updated_library := await db_find_library(object_id)) is not None:
                 return updated_library
@@ -128,4 +130,4 @@ async def db_update_library(object_id: str, library: UpdateLibraryModel) -> Libr
 
 
 async def db_delete_library(object_id: str):
-    return await db[Collections.LIBRARIES.value].delete_one({"_id": ObjectId(object_id)})
+    return await db[LIBRARIES].delete_one({"_id": ObjectId(object_id)})
