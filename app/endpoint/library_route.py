@@ -3,9 +3,12 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 from starlette import status
 
+from app.endpoint.base_models.custom_response_models import LibContentResponseModel
+
 from app.model.library_model import UpdateLibraryModel, LibraryModel
 from app.services.db_service import db_find_all_libraries, db_find_library_by_name, db_insert_library, db_delete_library, \
     db_update_library
+from app.services.directory_service import get_dir_content, scan_in_depth
 from app.services.library_service import create_library_model
 
 router = APIRouter(prefix="/library", tags=["Library"], responses={404: {"library": "Not found"}})
@@ -51,3 +54,15 @@ async def remove_library(name: str):
         await db_delete_library(str(library_from_db.id))
     else:
         raise HTTPException(status_code=404, detail=f"Library {name} not found")
+
+
+@router.get("/{library_name}/content", response_model=LibContentResponseModel)
+async def get_path_content(library_name: str, path: str = ""):
+    library = await db_find_library_by_name(library_name)
+    return await get_dir_content(library, path)
+
+
+@router.get("/{library_name}/scan")
+async def scan_base_directory(library_name: str):
+    library = await db_find_library_by_name(library_name)
+    await scan_in_depth(library, "/")
