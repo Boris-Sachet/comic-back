@@ -35,6 +35,13 @@ from app.model.library_model import LibraryModel, UpdateLibraryModel
 # async def search_many_with_attributes(attributes: {}, collection: Collections):
 #     return await db[collection.value].find(attributes).to_list(None)
 
+# ===========================
+# COLLECTION SPECIFIC METHODS
+# ===========================
+async def db_remove_collection(collection_name: str):
+    return await db[collection_name].drop()
+
+
 # =====================
 # FILE SPECIFIC METHODS
 # =====================
