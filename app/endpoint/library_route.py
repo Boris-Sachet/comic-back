@@ -31,6 +31,7 @@ async def create_library(name: str, path: str, hidden: bool):
     if library_search is not None:
         raise HTTPException(status_code=409, detail=f"Library {name} already exist")
 
+    # TODO Create to collection in database too
     creation_result = await db_insert_library(create_library_model(name=name, path=path, hidden=hidden))
     if not creation_result.inserted_id:
         raise HTTPException(status_code=400, detail="Impossible to insert new library")
@@ -50,6 +51,7 @@ async def update_library(name: str, library: UpdateLibraryModel):
 async def remove_library(name: str):
     library_from_db = await db_find_library_by_name(name)
 
+    # TODO Remove collection in database too
     if library_from_db is not None:
         await db_delete_library(str(library_from_db.id))
     else:
