@@ -13,3 +13,17 @@ services:
     volumes:
       - ./mongo/database/mongodb/db:/data/db
       - ./mongo/mongo-init:/docker-entrypoint-initdb.d:ro
+
+
+  comic_back:
+    container_name: comic-back
+    image: ${IMAGE_COMIC_BACK}
+    restart: unless-stopped
+    ports:
+      - "8042:80"
+    links:
+      - mongo
+    environment:
+      MONGO_URL: ${MONGO_URL}
+      MONGO_USR: ${MONGO_USR}
+      MONGO_PWD: ${MONGO_PWD}
