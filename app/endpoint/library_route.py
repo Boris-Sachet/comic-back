@@ -67,5 +67,5 @@ async def get_path_content(library_name: str, path: str = ""):
 @router.get("/{library_name}/scan")
 async def scan_base_directory(library_name: str):
     library = await db_find_library_by_name(library_name)
-    await scan_in_depth(library, "/")
+    await scan_in_depth(library, "")
     await purge_deleted_files(library)
