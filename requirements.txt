@@ -10,5 +10,6 @@ httptools~=0.5.0
 pydantic~=1.10.2
 motor[srv]~=3.0.0
 rarfile~=4.0
+smbprotocol~=1.9.0
 # pymongo[srv]~=4.2.0
 # dnspython~=2.2.1
