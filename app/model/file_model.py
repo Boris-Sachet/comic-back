@@ -3,7 +3,7 @@ from os.path import splitext, basename
 from typing import Optional, List
 
 from bson import ObjectId
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from app.model.py_object_id import PyObjectId
 
@@ -19,6 +19,12 @@ class FileModel(BaseModel):
     pages_names: List[str] = Field(...)
     current_page: int = Field(...)
     md5: str = Field(...)
+
+    @validator("path", "full_path")
+    def trim_path(cls, value: str):
+        if value.startswith("\\") or value.startswith("/"):
+            return value.lstrip(value[0])
+        return value
 
     class Config:
         json_encoders = {ObjectId: str}

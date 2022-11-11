@@ -18,9 +18,9 @@ from app.tools import is_image
 LOGGER = logging.getLogger(__name__)
 
 
-def create_file_model(library_path: str, file_path: str):
+def create_file_model(library: LibraryModel, file_path: str):
     name, extension = splitext(basename(file_path))
-    pages_list = count_pages(library_path, file_path)
+    pages_list = count_pages(library, file_path)
     file_dict = {
         "full_path": file_path,
         "path": os.path.dirname(file_path),
@@ -30,7 +30,7 @@ def create_file_model(library_path: str, file_path: str):
         "pages_count": len(pages_list),
         "pages_names": pages_list,
         "current_page": 0,
-        "md5": calculate_md5(library_path, file_path)
+        "md5": calculate_md5(library, file_path)
     }
     return FileModel(**file_dict)
 
@@ -50,16 +50,21 @@ def get_opener_lib(extension: str):
             return ZipFile
         case ".cbr":
             return RarFile
+        case _:
+            raise ValueError(f"Invalid file extension: {extension}")
 
 
-def get_full_path(library_path: str, file_path: str) -> str:
+def get_full_path(library: LibraryModel, file_path: str) -> str:
     """Get the access path opf the file"""
-    return join(library_path, file_path)
+    if library.connect_type == "local":
+        return join(library.path, file_path)
+    if library.connect_type == "smb":
+        return library.path + "\\" + file_path
 
 
-def calculate_md5(library_path: str, file_path: str) -> str:
+def calculate_md5(library: LibraryModel, file_path: str) -> str:
     """Calculate md5 signature of a file"""
-    return hashlib.md5(pathlib.Path(get_full_path(library_path, file_path)).read_bytes()).hexdigest()
+    return hashlib.md5(pathlib.Path(get_full_path(library, file_path)).read_bytes()).hexdigest()
 
 
 async def get_file_from_db(library: LibraryModel, file_path: str) -> FileModel:
@@ -74,7 +79,7 @@ async def get_file_from_db(library: LibraryModel, file_path: str) -> FileModel:
         # File is not found, calculate md5 and search it to make sure the file wasn't moved/renamed
         # Create a new FileModel to avoid recalculating md5 if it doesn't exist in database anyway
         try:
-            file = create_file_model(library.path, file_path)
+            file = create_file_model(library, file_path)
             LOGGER.debug(f"Searching for {file.name} md5 {file.md5} existence in database")
             db_file = await db_find_file_by_md5(library.name, file.md5)
             if not db_file:
@@ -103,19 +108,19 @@ async def purge_deleted_files(library: LibraryModel):
     LOGGER.debug("File purge started")
     files = await db_find_all_files(library.name)
     for file in files:
-        if not isfile(get_full_path(library.path, file["full_path"])):
+        if not isfile(get_full_path(library, file["full_path"])):
             await db_delete_file(library.name, str(file["id"]))
             LOGGER.info(f"File {file['name']} purged from library {library.name} because no actual file was found")
     LOGGER.debug("File purge ended")
 
 
 # Pages methods
-def count_pages(library_path: str, file_path: str) -> List[str]:
+def count_pages(library: LibraryModel, file_path: str) -> List[str]:
     """Create a list of all the pages names in their naming order and count the result"""
     LOGGER.debug(f"{file_path} : Counting pages")
     opener_lib = get_opener_lib(splitext(basename(file_path))[1])
     pages_names = []
-    with opener_lib(get_full_path(library_path, file_path), 'r') as file:
+    with opener_lib(get_full_path(library, file_path), 'r') as file:
         for item in file.infolist():
             if is_image(item.filename):
                 pages_names.append(item.filename)
@@ -123,17 +128,17 @@ def count_pages(library_path: str, file_path: str) -> List[str]:
         return pages_names
 
 
-def get_page(library_path: str, file_data: FileModel, num: int = 0):
+def get_page(library: LibraryModel, file_data: FileModel, num: int = 0):
     """Get a specific page with a given number"""
     opener_lib = get_opener_lib(file_data.extension)
-    with opener_lib(get_full_path(library_path, file_data.full_path), 'r') as file:
+    with opener_lib(get_full_path(library, file_data.full_path), 'r') as file:
         with file.open(file_data.pages_names[num]) as img:
             return img.read()
 
 
-def get_current_page(library_path: str, file: FileModel):
+def get_current_page(library: LibraryModel, file: FileModel):
     """Return file data corresponding to the current page number"""
-    return get_page(library_path, file, file.current_page)
+    return get_page(library, file, file.current_page)
 
 
 async def set_page(library_name: str, file: FileModel, num: int) -> FileModel:

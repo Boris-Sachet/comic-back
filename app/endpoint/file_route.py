@@ -36,17 +36,17 @@ async def stream_file(websocket: WebSocket, library_name: str, file_id: str):
         if not file:
             raise HTTPException(status_code=404, detail="File not found in database")
 
-        if not isfile(get_full_path(library.path, file.full_path)):
+        if not isfile(get_full_path(library, file.full_path)):
             raise HTTPException(status_code=404, detail="File not found on storage")
 
         # Send current page then await command, execute command then send current page
         await websocket.send_json(ResponseFileModel(**file.dict()).json())
-        await websocket.send_bytes(get_current_page(library.path, file))
+        await websocket.send_bytes(get_current_page(library, file))
         while True:
             action = await websocket.receive_text()
             file = await execute_action(library_name, file, action)
             await websocket.send_json(ResponseFileModel(**file.dict()).json())
-            await websocket.send_bytes(get_current_page(library.path, file))
+            await websocket.send_bytes(get_current_page(library, file))
 
     except ConnectionClosedOK:
         pass

@@ -62,6 +62,9 @@ async def remove_library(name: str):
 @router.get("/{library_name}/content", response_model=LibContentResponseModel)
 async def get_path_content(library_name: str, path: str = ""):
     library = await db_find_library_by_name(library_name)
+    # Remove leading slash or backslash
+    if path.startswith("\\") or path.startswith("/"):
+        path = path.lstrip(path[0])
     return await get_dir_content(library, path)
 
 

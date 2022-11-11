@@ -15,6 +15,12 @@ class LibraryModel(BaseModel):
     user: Optional[str]
     password: Optional[str]
 
+    @validator("path")
+    def trim_path(cls, value: str):
+        if value.endswith("\\") or value.endswith("/"):
+            return value.rstrip(value[-1])
+        return value
+
     @validator('connect_type')
     def connect_type_possible_values(cls, value):
         accepted_values = ["local", "smb"]
