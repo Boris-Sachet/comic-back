@@ -1,7 +1,7 @@
 from typing import Optional
 
 from bson import ObjectId
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, root_validator
 
 from app.model.py_object_id import PyObjectId
 
@@ -12,6 +12,8 @@ class LibraryModel(BaseModel):
     path: str = Field(...)
     hidden: bool = Field(...)
     connect_type: str = Field(...)  # smb or local
+    user: Optional[str]
+    password: Optional[str]
 
     @validator('connect_type')
     def connect_type_possible_values(cls, value):
@@ -19,6 +21,13 @@ class LibraryModel(BaseModel):
         if value not in accepted_values:
             raise ValueError(f"connect_type parameter must be {accepted_values}")
         return value
+
+    @root_validator
+    def check_smb_user_pwd(cls, values):
+        if values.get("connect_type") == "smb":
+            if values.get("user") is None or values.get("password") is None:
+                raise ValueError("User and password required for SMB connection")
+        return values
 
     class Config:
         json_encoders = {ObjectId: str}
@@ -34,6 +43,8 @@ class UpdateLibraryModel(BaseModel):
     path: Optional[str]
     hidden: Optional[bool]
     connect_type: Optional[str]
+    user: Optional[str]
+    password: Optional[str]
 
     @validator('connect_type')
     def connect_type_possible_values(cls, value):
@@ -41,6 +52,13 @@ class UpdateLibraryModel(BaseModel):
         if value not in accepted_values:
             raise ValueError(f"connect_type parameter must be {accepted_values}")
         return value
+
+    @root_validator
+    def check_smb_user_pwd(cls, values):
+        if values.get("connect_type") == "smb":
+            if values.get("user") is None or values.get("password") is None:
+                raise ValueError("User and password required for SMB connection")
+        return values
 
     class Config:
         # Whether to allow arbitrary user types for fields
