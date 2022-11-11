@@ -1,7 +1,7 @@
 from typing import Optional
 
 from bson import ObjectId
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from app.model.py_object_id import PyObjectId
 
@@ -11,6 +11,14 @@ class LibraryModel(BaseModel):
     name: str = Field(...)
     path: str = Field(...)
     hidden: bool = Field(...)
+    connect_type: str = Field(...)  # smb or local
+
+    @validator('connect_type')
+    def connect_type_possible_values(cls, value):
+        accepted_values = ["local", "smb"]
+        if value not in accepted_values:
+            raise ValueError(f"connect_type parameter must be {accepted_values}")
+        return value
 
     class Config:
         json_encoders = {ObjectId: str}
@@ -25,6 +33,14 @@ class LibraryModel(BaseModel):
 class UpdateLibraryModel(BaseModel):
     path: Optional[str]
     hidden: Optional[bool]
+    connect_type: Optional[str]
+
+    @validator('connect_type')
+    def connect_type_possible_values(cls, value):
+        accepted_values = ["local", "smb"]
+        if value not in accepted_values:
+            raise ValueError(f"connect_type parameter must be {accepted_values}")
+        return value
 
     class Config:
         # Whether to allow arbitrary user types for fields

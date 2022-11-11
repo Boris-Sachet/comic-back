@@ -27,12 +27,13 @@ async def get_library(name: str):
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_library(name: str, path: str, hidden: bool):
+async def create_library(name: str, path: str, hidden: bool, connect_type: str):
     library_search = await db_find_library_by_name(name)
     if library_search is not None:
         raise HTTPException(status_code=409, detail=f"Library {name} already exist")
 
-    creation_result = await db_insert_library(create_library_model(name=name, path=path, hidden=hidden))
+    creation_result = await db_insert_library(create_library_model(
+        name=name, path=path, hidden=hidden, connect_type=connect_type))
     if not creation_result.inserted_id:
         raise HTTPException(status_code=400, detail="Impossible to insert new library")
 
