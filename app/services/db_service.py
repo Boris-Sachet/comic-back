@@ -8,37 +8,11 @@ from app.model.file_model import FileModel, UpdateFileModel
 from app.model.library_model import LibraryModel, UpdateLibraryModel
 
 
-# async def search_by_id(object_id: str, collection: Collections):
-#     return await db[collection.value].find_one({"_id": ObjectId(object_id)})
-#
-#
-# async def update_by_id(object_id: str, collection: Collections, dict_data: {}):
-#     return await db[collection.value].update_one({"_id": ObjectId(object_id)}, {"$set": dict_data})
-#
-#
-# async def insert_one(collection: Collections, dict_data: {}):
-#     return await db[collection.value].insert_one(dict_data)
-#
-#
-# async def get_list(collection: Collections):
-#     return await db[collection.value].find().to_list(None)
-#
-#
-# async def delete_by_id(object_id: str, collection: Collections):
-#     return await db[collection.value].delete_one({"_id": ObjectId(object_id)})
-#
-#
-# async def search_with_attributes(attributes: {}, collection: Collections):
-#     return await db[collection.value].find_one(attributes)
-#
-#
-# async def search_many_with_attributes(attributes: {}, collection: Collections):
-#     return await db[collection.value].find(attributes).to_list(None)
-
 # ===========================
 # COLLECTION SPECIFIC METHODS
 # ===========================
 async def db_remove_collection(collection_name: str):
+    """Delete a database collection"""
     return await db[collection_name].drop()
 
 
@@ -46,6 +20,7 @@ async def db_remove_collection(collection_name: str):
 # FILE SPECIFIC METHODS
 # =====================
 async def db_find_file(library_name: str, object_id: str) -> FileModel | None:
+    """Find a file in a library by id"""
     file_dict = await db[library_name].find_one({"_id": ObjectId(object_id)})
     if file_dict is not None:
         return FileModel(**file_dict)
@@ -53,6 +28,7 @@ async def db_find_file(library_name: str, object_id: str) -> FileModel | None:
 
 
 async def db_find_file_by_full_path(library_name: str, file_path: str) -> FileModel | None:
+    """Find a file in a library by full path"""
     file_dict = await db[library_name].find_one({"full_path": file_path})
     if file_dict is not None:
         return FileModel(**file_dict)
@@ -60,6 +36,7 @@ async def db_find_file_by_full_path(library_name: str, file_path: str) -> FileMo
 
 
 async def db_find_file_by_md5(library_name: str, md5: str) -> FileModel | None:
+    """Find a file in a library by md5"""
     file_dict = await db[library_name].find_one({"md5": md5})
     if file_dict is not None:
         return FileModel(**file_dict)
@@ -67,14 +44,17 @@ async def db_find_file_by_md5(library_name: str, md5: str) -> FileModel | None:
 
 
 async def db_find_all_files(library_name: str) -> List[dict]:
+    """Get a list of all files in library"""
     return await db[library_name].find().to_list(None)
 
 
 async def db_insert_file(library_name: str, file: FileModel):
+    """Insert a new file in library"""
     return await db[library_name].insert_one(file.dict(by_alias=True))
 
 
 async def db_update_file(library_name: str, object_id: str, file: UpdateFileModel) -> FileModel:
+    """Update an existing file by his id with an  update model"""
     file = {key: value for key, value in file.dict().items() if value is not None}
 
     # If there is modifications to do
@@ -92,6 +72,7 @@ async def db_update_file(library_name: str, object_id: str, file: UpdateFileMode
 
 
 async def db_delete_file(library_name: str, object_id: str):
+    """Delete a file data in library"""
     return await db[library_name].delete_one({"_id": ObjectId(object_id)})
 
 
@@ -102,6 +83,7 @@ LIBRARIES = "libraries"
 
 
 async def db_find_library(object_id: str) -> LibraryModel | None:
+    """Find a library by id"""
     library_dict = await db[LIBRARIES].find_one({"_id": ObjectId(object_id)})
     if library_dict is not None:
         return LibraryModel(**library_dict)
@@ -109,6 +91,7 @@ async def db_find_library(object_id: str) -> LibraryModel | None:
 
 
 async def db_find_library_by_name(name: str) -> LibraryModel | None:
+    """Find a library by name"""
     library_dict = await db[LIBRARIES].find_one({"name": name})
     if library_dict is not None:
         return LibraryModel(**library_dict)
@@ -116,14 +99,17 @@ async def db_find_library_by_name(name: str) -> LibraryModel | None:
 
 
 async def db_find_all_libraries() -> List[LibraryModel]:
+    """Get a list of all libraries"""
     return await db[LIBRARIES].find().to_list(None)
 
 
 async def db_insert_library(library: LibraryModel):
+    """Create a new library"""
     return await db[LIBRARIES].insert_one(library.dict(by_alias=True))
 
 
 async def db_update_library(object_id: str, library: UpdateLibraryModel) -> LibraryModel:
+    """Update a library by his id with an update model"""
     library = {key: value for key, value in library.dict().items() if value is not None}
 
     # If there is modifications to do
@@ -141,4 +127,5 @@ async def db_update_library(object_id: str, library: UpdateLibraryModel) -> Libr
 
 
 async def db_delete_library(object_id: str):
+    """Delete a library"""
     return await db[LIBRARIES].delete_one({"_id": ObjectId(object_id)})
