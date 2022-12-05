@@ -4,3 +4,4 @@ db.createUser({ user:"mongousr", pwd:"mongopwd", roles: [ { role: "readWrite", d
 db.createUser({ user:"admin", pwd:"mongopwd", roles: [{ role: "dbAdmin", db: "comic-back" }, { role: "readWrite", db: "comic-back" }] });
 
 db.createCollection('comics');
+db.createCollection('libraries');
