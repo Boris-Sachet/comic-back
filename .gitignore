@@ -1,5 +1,6 @@
 # Manual additions
 /docker/mongo/database
+/docker/.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

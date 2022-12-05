@@ -1,18 +1,18 @@
 version: '3.8'
 services:
   # Mongodb database
-  mongo:
-    image: mongo
-    container_name: mongo
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: mogoadm
-      MONGO_INITDB_ROOT_PASSWORD: mogopwd
-    ports:
-      - "27017:27017"
-    volumes:
-      - ./mongo/database/mongodb/db:/data/db
-      - ./mongo/mongo-init:/docker-entrypoint-initdb.d:ro
+#  mongo:
+#    image: mongo
+#    container_name: mongo
+#    restart: unless-stopped
+#    environment:
+#      MONGO_INITDB_ROOT_USERNAME: mogoadm
+#      MONGO_INITDB_ROOT_PASSWORD: mogopwd
+#    ports:
+#      - "27017:27017"
+#    volumes:
+#      - ./mongo/database/mongodb/db:/data/db
+#      - ./mongo/mongo-init:/docker-entrypoint-initdb.d:ro
 
 
   comic_back:
@@ -21,8 +21,8 @@ services:
     restart: unless-stopped
     ports:
       - "8042:80"
-    links:
-      - mongo
+#    links:
+#      - mongo
     environment:
       MONGO_URL: ${MONGO_URL}
       MONGO_USR: ${MONGO_USR}
