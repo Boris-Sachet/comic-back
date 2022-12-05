@@ -2,7 +2,7 @@ import logging
 import pathlib
 import smbclient
 from os import listdir
-from os.path import isfile, join, normpath
+from os.path import isfile, join
 from app.model.directory_model import DirectoryModel
 from app.model.library_model import LibraryModel
 from app.services.file_service import get_file_from_db, get_full_path
@@ -36,7 +36,7 @@ async def get_local_dir_content(library: LibraryModel, path: str, supported_exte
 
 
 async def get_smb_dir_content(library: LibraryModel, path: str, supported_extentions: list):
-    """Return the content of the local directory in two list, the list of subdirs and the list of supported files
+    """Return the content of the smb directory in two list, the list of subdirs and the list of supported files
          (as base model extensions)"""
     dirs = []
     files = []
