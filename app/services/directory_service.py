@@ -25,7 +25,7 @@ async def get_local_dir_content(library: LibraryModel, path: str, supported_exte
          (as base model extensions)"""
     dirs = []
     files = []
-    for item in listdir(library.path + path):
+    for item in listdir(get_full_path(library, path)):
         if isfile(get_full_path(library, join(path, item))):
             if pathlib.Path(item).suffix in supported_extentions:
                 if (db_file := await get_file_from_db(library, join(path, item))) is not None:
