@@ -5,7 +5,7 @@ from os import listdir
 from os.path import isfile, join
 from app.model.directory_model import DirectoryModel
 from app.model.library_model import LibraryModel
-from app.services.file_service import get_file_from_db, get_full_path
+from app.services.file_service import FileService
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,10 +25,10 @@ async def get_local_dir_content(library: LibraryModel, path: str, supported_exte
          (as base model extensions)"""
     dirs = []
     files = []
-    for item in listdir(get_full_path(library, path)):
-        if isfile(get_full_path(library, join(path, item))):
+    for item in listdir(FileService.get_full_path(library, path)):
+        if isfile(FileService.get_full_path(library, join(path, item))):
             if pathlib.Path(item).suffix in supported_extentions:
-                if (db_file := await get_file_from_db(library, join(path, item))) is not None:
+                if (db_file := await FileService.get_file_from_db(library, join(path, item))) is not None:
                     files.append(db_file)
         else:
             dirs.append(DirectoryModel.create(join(path, item)))
@@ -41,10 +41,10 @@ async def get_smb_dir_content(library: LibraryModel, path: str, supported_extent
     dirs = []
     files = []
     smb_info = {"username": library.user, "password": library.password}
-    for item in smbclient.scandir(path=get_full_path(library, path), **smb_info):
+    for item in smbclient.scandir(path=FileService.get_full_path(library, path), **smb_info):
         if item.is_file():
             if pathlib.Path(item.name).suffix in supported_extentions:
-                if (db_file := await get_file_from_db(library, path + '\\' + item.name)) is not None:
+                if (db_file := await FileService.get_file_from_db(library, path + '\\' + item.name)) is not None:
                     files.append(db_file)
             else:
                 dirs.append(DirectoryModel.create(join(path, item.name)))
