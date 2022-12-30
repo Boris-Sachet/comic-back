@@ -1,13 +1,12 @@
 from os.path import isfile
 
 from fastapi import APIRouter, HTTPException
-from fastapi.openapi.models import Response
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from websockets.exceptions import ConnectionClosedOK
 
 from fastapi.websockets import WebSocket
 
-from app.model.file_model import ResponseFileModel
+from app.model.file_model import ResponseFileModel, FileModel
 from app.services.db_service import db_find_file, db_find_library_by_name
 from app.services.file_service import FileService
 
@@ -30,11 +29,52 @@ async def get_library_file(library_name: str, file_id: str):
     return library, file
 
 
-# @router.get("/", response_class=FileResponse)
-# async def get_file(path: str):
-#     file_path = join(base_dir, path)
-#     if isfile(file_path):
-#         return FileResponse(file_path)
+def format_file_response(file: FileModel, image_bytes: bytes):
+    image_format = file.pages_names[0].split('.')[-1]
+    headers = {"Content-Disposition": f"inline; filename=\"{file.id}-0.{image_format}\""}
+    return Response(content=image_bytes, media_type=f"image/{image_format}", headers=headers)
+
+
+@router.get("/{library_name}/{file_id}/cover", response_class=Response)
+async def get_cover(library_name: str, file_id: str):
+    """Get the cover/first page of a file"""
+    library, file = await get_library_file(library_name, file_id)
+    return format_file_response(file, FileService.get_page(library, file, 0))
+
+
+@router.get("/{library_name}/{file_id}/page/{page_number}", response_class=Response)
+async def get_page(library_name: str, file_id: str, page_number: int):
+    """Get page of a file"""
+    library, file = await get_library_file(library_name, file_id)
+    if page_number not in range(0, file.pages_count):
+        raise HTTPException(status_code=404, detail="Page not found in file")
+    return format_file_response(file, FileService.get_page(library, file, page_number))
+
+
+@router.get("/{library_name}/{file_id}/page/{page_number}", response_class=Response)
+async def read_page(library_name: str, file_id: str, page_number: int):
+    """Get page of a file and set it as the current page for the file"""
+    library, file = await get_library_file(library_name, file_id)
+    if page_number not in range(0, file.pages_count):
+        raise HTTPException(status_code=404, detail="Page not found in file")
+    file = await FileService.set_page(library, file, page_number)
+    return format_file_response(file, FileService.get_current_page(library, file))
+
+
+@router.get("/{library_name}/{file_id}/page/next", response_class=Response)
+async def read_next(library_name: str, file_id: str):
+    """Get the next page of a file and set it as the current page for the file"""
+    library, file = await get_library_file(library_name, file_id)
+    file = await FileService.next_page(library, file)
+    return format_file_response(file, FileService.get_current_page(library, file))
+
+
+@router.get("/{library_name}/{file_id}/page/prev", response_class=Response)
+async def read_previous(library_name: str, file_id: str):
+    """Get the previous page of a file and set it as the current page for the file"""
+    library, file = await get_library_file(library_name, file_id)
+    file = await FileService.next_page(library, file)
+    return format_file_response(file, FileService.get_current_page(library, file))
 
 
 @router.websocket("/")
@@ -53,7 +93,7 @@ async def stream_file(websocket: WebSocket, library_name: str, file_id: str):
         await websocket.send_bytes(FileService.get_current_page(library, file))
         while True:
             action = await websocket.receive_text()
-            file = await FileService.execute_action(library_name, file, action)
+            file = await FileService.execute_action(library, file, action)
             await websocket.send_json(ResponseFileModel(**file.dict()).json())
             await websocket.send_bytes(FileService.get_current_page(library, file))
 

@@ -37,15 +37,15 @@ class FileService:
         return FileModel(**file_dict)
 
     @staticmethod
-    async def execute_action(library_name: str, file: FileModel, action: str) -> FileModel:
+    async def execute_action(library: LibraryModel, file: FileModel, action: str) -> FileModel:
         """Execute the given reading action on the given reading file"""
         match action:
             case "+":
-                return await FileService.next_page(library_name, file)
+                return await FileService.next_page(library, file)
             case "-":
-                return await FileService.prev_page(library_name, file)
+                return await FileService.prev_page(library, file)
             case _:
-                return await FileService.set_page(library_name, file, int(action))
+                return await FileService.set_page(library, file, int(action))
 
     @staticmethod
     def get_opener_lib(extension: str):
@@ -146,18 +146,18 @@ class FileService:
         return FileService.get_page(library, file, file.current_page)
 
     @staticmethod
-    async def set_page(library_name: str, file: FileModel, num: int) -> FileModel:
+    async def set_page(library: LibraryModel, file: FileModel, num: int) -> FileModel:
         """Set the current page of a file in the database and return the updated FileModel object"""
         if 0 <= num <= file.pages_count - 1:
-            return await db_update_file(library_name, str(file.id), UpdateFileModel(**{"current_page": num}))
+            return await db_update_file(library.name, str(file.id), UpdateFileModel(**{"current_page": num}))
         return file
 
     @staticmethod
-    async def next_page(library_name: str, file: FileModel) -> FileModel:
+    async def next_page(library: LibraryModel, file: FileModel) -> FileModel:
         """Increment current page for file"""
-        return await FileService.set_page(library_name, file, file.current_page + 1)
+        return await FileService.set_page(library, file, file.current_page + 1)
 
     @staticmethod
-    async def prev_page(library_name: str, file: FileModel) -> FileModel:
+    async def prev_page(library: LibraryModel, file: FileModel) -> FileModel:
         """Decrement current page for file"""
-        return await FileService.set_page(library_name, file, file.current_page - 1)
+        return await FileService.set_page(library, file, file.current_page - 1)
