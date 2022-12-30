@@ -1,15 +1,13 @@
-fastapi~=0.75.2
-uvicorn~=0.18.3
-setuptools~=65.4.0
+fastapi==0.88.0
+uvicorn==0.20.0
+setuptools==65.6.3
 websockets~=10.3
 PyYAML~=6.0
-wheel~=0.37.1
+wheel==0.38.4
 python-dotenv~=0.21.0
 watchgod~=0.8.2
 httptools~=0.5.0
 pydantic~=1.10.2
-motor[srv]~=3.0.0
+motor[srv]==3.1.1
 rarfile~=4.0
 smbprotocol~=1.10.0
-# pymongo[srv]~=4.2.0
-# dnspython~=2.2.1
