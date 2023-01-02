@@ -1,12 +1,13 @@
 import hashlib
+import io
 import logging
 import os
 import pathlib
 from os.path import join, splitext, basename, isfile
 from typing import List
 from zipfile import ZipFile, BadZipfile
-
 from rarfile import RarFile, BadRarFile, NotRarFile
+from PIL import Image
 
 from app.enums.type_model import TypeModel
 from app.model.file_model import FileModel, UpdateFileModel
@@ -60,7 +61,7 @@ class FileService:
 
     @staticmethod
     def get_full_path(library: LibraryModel, file_path: str) -> str:
-        """Get the access path opf the file"""
+        """Get the access path of the file"""
         if library.connect_type == "local":
             return join(library.path, file_path)
         if library.connect_type == "smb":
@@ -87,20 +88,22 @@ class FileService:
                 file = FileService.create_file_model(library, file_path)
                 LOGGER.debug(f"Searching for {file.name} md5 {file.md5} existence in database")
                 db_file = await db_find_file_by_md5(library.name, file.md5)
-                if not db_file:
-                    # If file isn't found by md5, add a new entry in the database
-                    insert_result = await db_insert_file(library.name, file)
-                    LOGGER.info(f"{file.full_path} : added new entry in database {insert_result.inserted_id}")
-                    return await db_find_file(library.name, insert_result.inserted_id)
+                if file.pages_count == 0:
+                    LOGGER.error(f"File : '{file_path}', no readable pages found, ignoring file")
                 else:
-                    # TODO Before updating check if old file exist, if yes allow duplicate and create new entry in db
-                    # Else update existing entry
-                    # WARNING: this will prevent duplicate file from being listed multiple times,
-                    # database will only mention last file found by md5
-                    LOGGER.info(f"{db_file.full_path} : updating to new location {file.full_path}")
-                    file_updated = UpdateFileModel.update_path(file_path)
-                    return await db_update_file(library.name, str(db_file.id), file_updated)
-
+                    if not db_file:
+                        # If file isn't found by md5, add a new entry in the database
+                        insert_result = await db_insert_file(library.name, file)
+                        LOGGER.info(f"{file.full_path} : added new entry in database {insert_result.inserted_id}")
+                        return await db_find_file(library.name, insert_result.inserted_id)
+                    else:
+                        # TODO Before updating check if old file exist, if yes allow duplicate and create new entry in db
+                        # Else update existing entry
+                        # WARNING: this will prevent duplicate file from being listed multiple times,
+                        # database will only mention last file found by md5
+                        LOGGER.info(f"{db_file.full_path} : updating to new location {file.full_path}")
+                        file_updated = UpdateFileModel.update_path(file_path)
+                        return await db_update_file(library.name, str(db_file.id), file_updated)
             except (BadZipfile, BadRarFile, NotRarFile):
                 LOGGER.error(f"Unreadable file : '{file_path}', ignoring file")
 
@@ -133,12 +136,15 @@ class FileService:
             return pages_names
 
     @staticmethod
-    def get_page(library: LibraryModel, file_data: FileModel, num: int = 0):
+    def get_page(library: LibraryModel, file_data: FileModel, num: int = 0) -> bytes:
         """Get a specific page with a given number"""
         opener_lib = FileService.get_opener_lib(file_data.extension)
         with opener_lib(FileService.get_full_path(library, file_data.full_path), 'r') as file:
-            with file.open(file_data.pages_names[num]) as img:
-                return img.read()
+            try:
+                with file.open(file_data.pages_names[num]) as img:
+                    return img.read()
+            except Exception as e:
+                print(file_data)  # TODO manage the error when files have 0 pages
 
     @staticmethod
     def get_current_page(library: LibraryModel, file: FileModel):
@@ -161,3 +167,11 @@ class FileService:
     async def prev_page(library: LibraryModel, file: FileModel) -> FileModel:
         """Decrement current page for file"""
         return await FileService.set_page(library, file, file.current_page - 1)
+
+    @staticmethod
+    def generate_thumbnail_cover(library: LibraryModel, file: FileModel) -> Image:
+        """Generate a thumbnail cover for the given file"""
+        cover_bytes = FileService.get_page(library, file, 0)
+        cover = Image.open(io.BytesIO(cover_bytes))
+        cover.thumbnail((400, 400))
+        return cover

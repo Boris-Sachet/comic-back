@@ -11,3 +11,4 @@ pydantic~=1.10.2
 motor[srv]==3.1.1
 rarfile~=4.0
 smbprotocol~=1.10.0
+Pillow==9.3.0

@@ -8,7 +8,7 @@ from app.endpoint.base_models.custom_response_models import LibContentResponseMo
 from app.model.library_model import UpdateLibraryModel, LibraryModel
 from app.services.db_service import db_find_all_libraries, db_find_library_by_name, db_insert_library, \
     db_delete_library, db_update_library, db_remove_collection
-from app.services.directory_service import get_dir_content, scan_in_depth
+from app.services.directory_service import DirectoryService
 from app.services.file_service import FileService
 from app.services.library_service import create_library_model
 
@@ -65,11 +65,11 @@ async def get_path_content(library_name: str, path: str = ""):
     # Remove leading slash or backslash
     if path.startswith("\\") or path.startswith("/"):
         path = path.lstrip(path[0])
-    return await get_dir_content(library, path)
+    return await DirectoryService.get_dir_content(library, path)
 
 
 @router.get("/{library_name}/scan")
 async def scan_base_directory(library_name: str):
     library = await db_find_library_by_name(library_name)
-    await scan_in_depth(library, "")
+    await DirectoryService.scan_in_depth(library, "")
     await FileService.purge_deleted_files(library)
