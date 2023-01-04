@@ -29,52 +29,7 @@ class DirectoryService:
         """Return the content of the directory in two list, the list of sub-dirs and the list of supported files
          (as base model extensions)"""
         factory = DirectoryService._select_factory(library)
-
-        dirs = []
-        files = []
-        for item in factory.listdir(library, FileService.get_full_path(library, path)):
-            if factory.isfile(library, path, item):
-                if factory.get_suffix(item) in DirectoryService._supported_extensions:
-                    if (db_file := await FileService.get_file_from_db(library, factory.get_file_path(path, item)))\
-                            is not None:
-                        files.append(db_file)
-                        if generate_thumbnails and not DirectoryService.thumbnail_exist(library, db_file):
-                            thumbnail = FileService.generate_thumbnail_cover(library, db_file)
-                            DirectoryService.save_thumbnail(library, db_file, thumbnail)
-            else:
-                dirs.append(DirectoryModel.create(factory.get_file_path(path, item)))
-        return dirs, files
-
-    # @staticmethod
-    # async def get_local_dir_content(library: LibraryModel, path: str, supported_extentions: list):
-    #     """Return the content of the local directory in two list, the list of subdirs and the list of supported files
-    #          (as base model extensions)"""
-    #     dirs = []
-    #     files = []
-    #     for item in listdir(FileService.get_full_path(library, path)):
-    #         if isfile(FileService.get_full_path(library, join(path, item))):
-    #             if pathlib.Path(item).suffix in supported_extentions:
-    #                 if (db_file := await FileService.get_file_from_db(library, join(path, item))) is not None:
-    #                     files.append(db_file)
-    #         else:
-    #             dirs.append(DirectoryModel.create(join(path, item)))
-    #     return dirs, files
-
-    # @staticmethod
-    # async def get_smb_dir_content(library: LibraryModel, path: str, supported_extentions: list):
-    #     """Return the content of the smb directory in two list, the list of subdirs and the list of supported files
-    #          (as base model extensions)"""
-    #     dirs = []
-    #     files = []
-    #     smb_info = {"username": library.user, "password": library.password}
-    #     for item in smbclient.scandir(path=FileService.get_full_path(library, path), **smb_info):
-    #         if item.is_file():
-    #             if pathlib.Path(item.name).suffix in supported_extentions:
-    #                 if (db_file := await FileService.get_file_from_db(library, path + '\\' + item.name)) is not None:
-    #                     files.append(db_file)
-    #             else:
-    #                 dirs.append(DirectoryModel.create(join(path, item.name)))
-    #     return dirs, files
+        return await factory.get_dir_content(library, path, DirectoryService._supported_extensions, generate_thumbnails)
 
     @staticmethod
     async def scan_in_depth(library: LibraryModel, path: str):
@@ -92,7 +47,7 @@ class DirectoryService:
         # factory = DirectoryService._select_factory(library)
         try:
             Path(f"{library.path}/.comic-back/thumbnails/").mkdir(parents=True, exist_ok=True)
-            thumbnail.save(f"{library.path}/.comic-back/thumbnails/{file.id}.jpg")
+            thumbnail.save(DirectoryService.get_thumbnail_path(library, file))
             LOGGER.info(f"Generated thumbnail for {file.id} {file.path}")
         except Exception as e:
             LOGGER.error(f"Can't save thumbnail for {file.id} {file.full_path} : {e}")
@@ -101,3 +56,7 @@ class DirectoryService:
     def thumbnail_exist(library: LibraryModel, file: FileModel):
         factory = DirectoryService._select_factory(library)
         return factory.isfile(library, join(library.path, ".comic-back/thumbnails/"), f"{file.id}.jpg")
+
+    @staticmethod
+    def get_thumbnail_path(library: LibraryModel, file: FileModel):
+        return f"{library.path}/.comic-back/thumbnails/{file.id}.jpg"
