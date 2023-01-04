@@ -1,13 +1,14 @@
 from os.path import isfile
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import Response, FileResponse
 from websockets.exceptions import ConnectionClosedOK
 
 from fastapi.websockets import WebSocket
 
 from app.model.file_model import ResponseFileModel, FileModel
 from app.services.db_service import db_find_file, db_find_library_by_name
+from app.services.directory_service import DirectoryService
 from app.services.file_service import FileService
 
 router = APIRouter(prefix="/file", tags=["File"], responses={404: {"file": "Not found"}})
@@ -36,10 +37,12 @@ def format_file_response(file: FileModel, image_bytes: bytes):
 
 
 @router.get("/{library_name}/{file_id}/cover", response_class=Response)
-async def get_cover(library_name: str, file_id: str):
+async def get_cover(library_name: str, file_id: str) -> FileResponse:
     """Get the cover/first page of a file"""
     library, file = await get_library_file(library_name, file_id)
-    return format_file_response(file, FileService.get_page(library, file, 0))
+    if DirectoryService.thumbnail_exist(library, file):
+        return FileResponse(DirectoryService.get_thumbnail_path(library, file))
+    raise HTTPException(status_code=404, detail="No cover for this file")
 
 
 @router.get("/{library_name}/{file_id}/page/{page_number}", response_class=Response)
