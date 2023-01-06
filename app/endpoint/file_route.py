@@ -54,7 +54,15 @@ async def get_page(library_name: str, file_id: str, page_number: int):
     return format_file_response(file, FileService.get_page(library, file, page_number))
 
 
-@router.get("/{library_name}/{file_id}/page/{page_number}", response_class=Response)
+@router.post("/{library_name}/{file_id}/page/{page_number}", response_model=ResponseFileModel)
+async def set_current_page(library_name: str, file_id: str, page_number: int):
+    library, file = await get_library_file(library_name, file_id)
+    if page_number not in range(0, file.pages_count):
+        raise HTTPException(status_code=404, detail="Page not found in file")
+    return await FileService.set_page(library, file, page_number)
+
+
+@router.get("/{library_name}/{file_id}/read/{page_number}", response_class=Response)
 async def read_page(library_name: str, file_id: str, page_number: int):
     """Get page of a file and set it as the current page for the file"""
     library, file = await get_library_file(library_name, file_id)
@@ -64,7 +72,7 @@ async def read_page(library_name: str, file_id: str, page_number: int):
     return format_file_response(file, FileService.get_current_page(library, file))
 
 
-@router.get("/{library_name}/{file_id}/page/next", response_class=Response)
+@router.get("/{library_name}/{file_id}/read/next", response_class=Response)
 async def read_next(library_name: str, file_id: str):
     """Get the next page of a file and set it as the current page for the file"""
     library, file = await get_library_file(library_name, file_id)
@@ -72,7 +80,7 @@ async def read_next(library_name: str, file_id: str):
     return format_file_response(file, FileService.get_current_page(library, file))
 
 
-@router.get("/{library_name}/{file_id}/page/prev", response_class=Response)
+@router.get("/{library_name}/{file_id}/read/prev", response_class=Response)
 async def read_previous(library_name: str, file_id: str):
     """Get the previous page of a file and set it as the current page for the file"""
     library, file = await get_library_file(library_name, file_id)
