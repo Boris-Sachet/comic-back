@@ -117,7 +117,9 @@ class FileService:
         files = await db_find_all_files(library.name)
         for file in files:
             if not isfile(FileService.get_full_path(library, file["full_path"])):
-                await db_delete_file(library.name, str(file["id"]))
+                await db_delete_file(library.name, str(file["_id"]))
+                # TODO Find a way to purge thumbnails without circular imports
+                # DirectoryService.delete_thumbnail(library, FileModel(**file))
                 LOGGER.info(f"File {file['name']} purged from library {library.name} because no actual file was found")
         LOGGER.debug("File purge ended")
 
