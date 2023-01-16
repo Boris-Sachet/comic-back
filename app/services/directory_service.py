@@ -1,15 +1,12 @@
 import logging
 from os.path import join
-from pathlib import Path
 
 from PIL import Image
 
-from app.model.directory_model import DirectoryModel
 from app.model.file_model import FileModel
 from app.model.library_model import LibraryModel
 from app.services.directory_service_local import DirectoryServiceLocal
 from app.services.directory_service_smb import DirectoryServiceSmb
-from app.services.file_service import FileService
 
 LOGGER = logging.getLogger(__name__)
 
@@ -42,21 +39,23 @@ class DirectoryService:
         for directory in dirs:
             await DirectoryService.scan_in_depth(library, directory.path)
 
+    # Thumbnail methods
     @staticmethod
     def save_thumbnail(library: LibraryModel, file: FileModel, thumbnail: Image):
-        # factory = DirectoryService._select_factory(library)
-        try:
-            Path(f"{library.path}/.comic-back/thumbnails/").mkdir(parents=True, exist_ok=True)
-            thumbnail.save(DirectoryService.get_thumbnail_path(library, file))
-            LOGGER.info(f"Generated thumbnail for {file.id} {file.path}")
-        except Exception as e:
-            LOGGER.error(f"Can't save thumbnail for {file.id} {file.full_path} : {e}")
+        factory = DirectoryService._select_factory(library)
+        factory.save_thumbnail(library, file, thumbnail)
 
     @staticmethod
-    def thumbnail_exist(library: LibraryModel, file: FileModel):
+    def thumbnail_exist(library: LibraryModel, file: FileModel) -> bool:
         factory = DirectoryService._select_factory(library)
         return factory.isfile(library, join(library.path, ".comic-back/thumbnails/"), f"{file.id}.jpg")
 
     @staticmethod
-    def get_thumbnail_path(library: LibraryModel, file: FileModel):
-        return f"{library.path}/.comic-back/thumbnails/{file.id}.jpg"
+    def get_thumbnail_path(library: LibraryModel, file: FileModel) -> str:
+        factory = DirectoryService._select_factory(library)
+        return factory.get_thumbnail_path(library, file)
+
+    @staticmethod
+    def delete_thumbnail(library: LibraryModel, file: FileModel):
+        factory = DirectoryService._select_factory(library)
+        factory.delete_thumbnail(library, file)
