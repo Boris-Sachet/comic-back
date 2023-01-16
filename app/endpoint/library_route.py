@@ -65,7 +65,7 @@ async def get_path_content(library_name: str, path: str = ""):
     # Remove leading slash or backslash
     if path.startswith("\\") or path.startswith("/"):
         path = path.lstrip(path[0])
-    return await DirectoryService.get_dir_content(library, path)
+    return await DirectoryService.get_dir_content(library, path, True)
 
 
 @router.get("/{library_name}/scan")
