@@ -16,6 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 class DirectoryServiceSmb:
     connect_type = "smb"
+    dir_name_blacklist = ["@eaDir"]
 
     @staticmethod
     def isfile(library: LibraryModel, path: str, item: SMBDirEntry):
@@ -37,7 +38,8 @@ class DirectoryServiceSmb:
                             thumbnail = FileService.generate_thumbnail_cover(library, db_file)
                             DirectoryServiceSmb.save_thumbnail(library, db_file, thumbnail)
             else:
-                dirs.append(DirectoryModel.create(join(path, item.name)))
+                if not item.name.startswith('.') or item in DirectoryServiceSmb.dir_name_blacklist:
+                    dirs.append(DirectoryModel.create(join(path, item.name)))
         return dirs, files
 
     @staticmethod

@@ -15,6 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 class DirectoryServiceLocal:
     connect_type = "local"
+    dir_name_blacklist = ["@eaDir"]
 
     @staticmethod
     def isfile(library: LibraryModel, path: str, item: str):
@@ -35,7 +36,7 @@ class DirectoryServiceLocal:
                             thumbnail = FileService.generate_thumbnail_cover(library, db_file)
                             DirectoryServiceLocal.save_thumbnail(library, db_file, thumbnail)
             else:
-                if not item.startswith('.'):
+                if not item.startswith('.') or item in DirectoryServiceLocal.dir_name_blacklist:
                     dirs.append(DirectoryModel.create(join(path, item)))
         return dirs, files
 
