@@ -38,7 +38,7 @@ class DirectoryServiceSmb:
                             thumbnail = FileService.generate_thumbnail_cover(library, db_file)
                             DirectoryServiceSmb.save_thumbnail(library, db_file, thumbnail)
             else:
-                if (not item.name.startswith('.')) or (item not in DirectoryServiceSmb.dir_name_blacklist):
+                if (not item.name.startswith('.')) and (item not in DirectoryServiceSmb.dir_name_blacklist):
                     dirs.append(DirectoryModel.create(join(path, item.name)))
         return dirs, files
 
