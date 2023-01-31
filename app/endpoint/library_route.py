@@ -65,7 +65,11 @@ async def get_path_content(library_name: str, path: str = ""):
     # Remove leading slash or backslash
     if path.startswith("\\") or path.startswith("/"):
         path = path.lstrip(path[0])
-    return await DirectoryService.get_dir_content(library, path, True)
+    try:
+        result = await DirectoryService.get_dir_content(library, path, True)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Folder {path} not found")
+    return result
 
 
 @router.get("/{library_name}/scan")
