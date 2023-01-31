@@ -135,6 +135,7 @@ class FileService:
                 if is_image(item.filename):
                     pages_names.append(item.filename)
             LOGGER.debug(f"{file_path} : {len(pages_names)} pages")
+            pages_names.sort()
             return pages_names
 
     @staticmethod
