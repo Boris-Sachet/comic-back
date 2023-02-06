@@ -6,8 +6,9 @@ from websockets.exceptions import ConnectionClosedOK
 
 from fastapi.websockets import WebSocket
 
-from app.model.file_model import ResponseFileModel, FileModel
-from app.services.db_service import db_find_file, db_find_library_by_name
+from app.model.file_model import ResponseFileModel, FileModel, UpdateFileModel
+from app.services.db_service import db_find_file, db_find_library_by_name, db_delete_file, db_find_file_by_full_path, \
+    db_update_file
 from app.services.directory_service import DirectoryService
 from app.services.file_service import FileService
 
@@ -86,6 +87,20 @@ async def read_previous(library_name: str, file_id: str):
     library, file = await get_library_file(library_name, file_id)
     file = await FileService.next_page(library, file)
     return format_file_response(file, FileService.get_current_page(library, file))
+
+
+@router.post("/{library_name}/{file_id}/regen", response_model=ResponseFileModel)
+async def regenerate_file_data(library_name: str, file_id: str):
+    """
+    Regenerate file data by deleting and recreating it in the database (saving info like current page).
+    Thumbnail is also regenerated.
+    """
+    library, file = await get_library_file(library_name, file_id)
+    DirectoryService.delete_thumbnail(library, file)
+    await db_delete_file(library.name, str(file.id))
+    await DirectoryService.get_dir_content(library, file.path, True)  # Regenerate file in db and thumbnail
+    new_file = await db_find_file_by_full_path(library.name, file.full_path)
+    return await db_update_file(library.name, str(new_file.id), UpdateFileModel(current_page=file.current_page))
 
 
 @router.websocket("/")
