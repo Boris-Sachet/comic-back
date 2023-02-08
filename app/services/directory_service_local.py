@@ -43,7 +43,7 @@ class DirectoryServiceLocal:
     @staticmethod
     def save_thumbnail(library: LibraryModel, file: FileModel, thumbnail: Image):
         try:
-            Path(f"{library.path}/.comic-back/thumbnails/").mkdir(parents=True, exist_ok=True)
+            Path(DirectoryServiceLocal.get_library_thumbnail_folder_path(library)).mkdir(parents=True, exist_ok=True)
             thumbnail.save(DirectoryServiceLocal.get_thumbnail_path(library, file))
             LOGGER.info(f"Generated thumbnail for {file.id} {file.path}")
         except Exception as e:
@@ -51,11 +51,15 @@ class DirectoryServiceLocal:
 
     @staticmethod
     def thumbnail_exist(library: LibraryModel, file: FileModel) -> bool:
-        return isfile(FileService.get_full_path(library, join(".comic-back/thumbnails/", f"{file.id}.jpg")))
+        return isfile(FileService.get_full_path(library, DirectoryServiceLocal.get_thumbnail_path(library, file)))
+
+    @staticmethod
+    def get_library_thumbnail_folder_path(library: LibraryModel) -> str:
+        return f"{library.path}/.comic-back/thumbnails"
 
     @staticmethod
     def get_thumbnail_path(library: LibraryModel, file: FileModel) -> str:
-        return f"{library.path}/.comic-back/thumbnails/{file.id}.jpg"
+        return f"{DirectoryServiceLocal.get_library_thumbnail_folder_path(library)}/{file.id}.jpg"
 
     @staticmethod
     def delete_thumbnail(library: LibraryModel, file: FileModel):

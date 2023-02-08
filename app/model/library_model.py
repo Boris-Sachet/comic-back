@@ -12,6 +12,8 @@ class LibraryModel(BaseModel):
     path: str = Field(...)
     hidden: bool = Field(...)
     connect_type: str = Field(...)  # smb or local
+    server: Optional[str]
+    service_name: Optional[str]
     user: Optional[str]
     password: Optional[str]
 
@@ -29,11 +31,24 @@ class LibraryModel(BaseModel):
         return value
 
     @root_validator
-    def check_smb_user_pwd(cls, values):
+    def check_smb_fields(cls, values):
         if values.get("connect_type") == "smb":
+            if values.get("server") is None:
+                raise ValueError("Server address required for SMB connection")
+            if values.get("service_name") is None:
+                raise ValueError("Share name required for SMB connection")
             if values.get("user") is None or values.get("password") is None:
                 raise ValueError("User and password required for SMB connection")
         return values
+
+    def smb_conn_info(self) -> dict:
+        return {
+            "username": self.user,
+            "password": self.password,
+            "my_name": "comic-back",
+            "remote_name": self.server,
+            "use_ntlm_v2": True
+        }
 
     class Config:
         json_encoders = {ObjectId: str}

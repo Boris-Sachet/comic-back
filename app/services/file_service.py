@@ -62,10 +62,11 @@ class FileService:
     @staticmethod
     def get_full_path(library: LibraryModel, file_path: str) -> str:
         """Get the access path of the file"""
-        if library.connect_type == "local":
-            return join(library.path, file_path)
-        if library.connect_type == "smb":
-            return library.path + "\\" + file_path
+        return join(library.path, file_path)
+        # if library.connect_type == "local":
+        #     return join(library.path, file_path)
+        # if library.connect_type == "smb":
+        #     return library.path + "\\" + file_path
 
     @staticmethod
     def calculate_md5(library: LibraryModel, file_path: str) -> str:

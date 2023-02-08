@@ -2,9 +2,12 @@ import logging
 from os.path import join
 from pathlib import Path
 
-import smbclient
+
 from PIL import Image
-from smbclient import SMBDirEntry
+from smb.SMBConnection import SMBConnection
+from io import BytesIO
+
+from smb.base import SharedFile
 
 from app.model.directory_model import DirectoryModel
 from app.model.file_model import FileModel
@@ -16,11 +19,17 @@ LOGGER = logging.getLogger(__name__)
 
 class DirectoryServiceSmb:
     connect_type = "smb"
-    dir_name_blacklist = ["@eaDir"]
+    dir_name_blacklist = [".", "..", "@eaDir"]
 
     @staticmethod
-    def isfile(library: LibraryModel, path: str, item: SMBDirEntry):
-        return item.is_file()
+    def _get_smb_conn(library: LibraryModel) -> SMBConnection:
+        conn = SMBConnection(**library.smb_conn_info())
+        conn.connect(library.server, 445)
+        return conn
+
+    @staticmethod
+    def isfile(library: LibraryModel, path: str, item: SharedFile):
+        return not item.isDirectory
 
     @staticmethod
     async def get_dir_content(library: LibraryModel, path: str, supported_extensions: list, generate_thumbnails: bool = False):
@@ -28,46 +37,53 @@ class DirectoryServiceSmb:
              (as base model extensions)"""
         dirs = []
         files = []
-        smb_info = {"username": library.user, "password": library.password}
-        for item in smbclient.scandir(path=FileService.get_full_path(library, path), **smb_info):
-            if item.is_file():
-                if Path(item.name).suffix in supported_extensions:
-                    if (db_file := await FileService.get_file_from_db(library, path + '\\' + item.name)) is not None:
+        folder_path = FileService.get_full_path(library, path)
+        conn = DirectoryServiceSmb._get_smb_conn(library)
+        for item in conn.listPath(service_name=library.service_name, path=folder_path):
+            if not item.isDirectory:
+                if Path(item.filename).suffix in supported_extensions:
+                    if (db_file := await FileService.get_file_from_db(library, join(folder_path, item.filename))) is not None:
                         files.append(db_file)
                         if generate_thumbnails and not DirectoryServiceSmb.thumbnail_exist(library, db_file):
                             thumbnail = FileService.generate_thumbnail_cover(library, db_file)
                             DirectoryServiceSmb.save_thumbnail(library, db_file, thumbnail)
             else:
-                if (not item.name.startswith('.')) and (item not in DirectoryServiceSmb.dir_name_blacklist):
-                    dirs.append(DirectoryModel.create(join(path, item.name)))
+                if (not item.filename.startswith('.')) and (item not in DirectoryServiceSmb.dir_name_blacklist):
+                    dirs.append(DirectoryModel.create(join(path, item.filename)))
         return dirs, files
 
     @staticmethod
     def save_thumbnail(library: LibraryModel, file: FileModel, thumbnail: Image):
-        # TODO
-        # try:
-        #     Path(f"{library.path}/.comic-back/thumbnails/").mkdir(parents=True, exist_ok=True)
-        #     thumbnail.save(DirectoryServiceSmb.get_thumbnail_path(library, file))
-        #     LOGGER.info(f"Generated thumbnail for {file.id} {file.path}")
-        # except Exception as e:
-        #     LOGGER.error(f"Can't save thumbnail for {file.id} {file.full_path} : {e}")
-        pass
+        conn = DirectoryServiceSmb._get_smb_conn(library)
+        img_io = BytesIO()
+        try:
+            conn.createDirectory(library.service_name, f"{library.path}/.comic-back/thumbnails")
+            thumbnail.save(img_io, "JPEG")
+            img_io.seek(0)
+            conn.storeFile(service_name=library.service_name,
+                           path=DirectoryServiceSmb.get_thumbnail_path(library, file),
+                           file_obj=img_io)
+            LOGGER.info(f"Generated thumbnail for {file.id} {file.path}")
+        except Exception as e:
+            LOGGER.error(f"Can't save thumbnail for {file.id} {file.full_path} : {e}")
 
     @staticmethod
     def thumbnail_exist(library: LibraryModel, file: FileModel) -> bool:
-        # TODO
-        # return isfile(FileService.get_full_path(library, join(".comic-back/thumbnails/", f"{file.id}.jpg")))
-        pass
+        conn = DirectoryServiceSmb._get_smb_conn(library)
+        thumbnails = conn.listPath(service_name=library.service_name,
+                                   path=DirectoryServiceSmb.get_library_thumbnail_folder_path(library))
+        return any(thumbnail.filename == f"{file.id}.jpg" for thumbnail in thumbnails)
+
+    @staticmethod
+    def get_library_thumbnail_folder_path(library: LibraryModel) -> str:
+        return f"{library.path}/.comic-back/thumbnails"
 
     @staticmethod
     def get_thumbnail_path(library: LibraryModel, file: FileModel) -> str:
-        # TODO
-        # return f"{library.path}\\.comic-back\\thumbnails\\{file.id}.jpg"
-        pass
+        return f"{DirectoryServiceSmb.get_library_thumbnail_folder_path(library)}/{file.id}.jpg"
 
     @staticmethod
     def delete_thumbnail(library: LibraryModel, file: FileModel):
-        # TODO
-        # if DirectoryServiceSmb.thumbnail_exist(library, file):
-        #     remove(DirectoryServiceSmb.get_thumbnail_path(library, file))
-        pass
+        if DirectoryServiceSmb.thumbnail_exist(library, file):
+            conn = DirectoryServiceSmb._get_smb_conn(library)
+            conn.deleteFiles(library.service_name, DirectoryServiceSmb.get_thumbnail_path(library, file))
