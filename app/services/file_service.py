@@ -1,29 +1,33 @@
-import hashlib
 import io
 import logging
 import os
-import pathlib
 from os.path import join, splitext, basename, isfile
-from typing import List
 from zipfile import ZipFile, BadZipfile
 from rarfile import RarFile, BadRarFile, NotRarFile
 from PIL import Image
+from smb.SMBConnection import SMBConnection
 
 from app.enums.type_model import TypeModel
 from app.model.file_model import FileModel, UpdateFileModel
 from app.model.library_model import LibraryModel
 from app.services.db_service import db_update_file, db_find_file_by_full_path, db_find_file_by_md5, db_insert_file, \
     db_find_file, db_find_all_files, db_delete_file
-from app.tools import is_image
+from app.services.storage_service import StorageService
 
 LOGGER = logging.getLogger(__name__)
 
 
 class FileService:
     @staticmethod
+    def __get_smb_conn(library: LibraryModel) -> SMBConnection:
+        conn = SMBConnection(**library.smb_conn_info())
+        conn.connect(library.server, 445)
+        return conn
+
+    @staticmethod
     def create_file_model(library: LibraryModel, file_path: str):
         name, extension = splitext(basename(file_path))
-        pages_list = FileService.count_pages(library, file_path)
+        pages_list = StorageService(library).list_pages(file_path, FileService.get_opener_lib(splitext(basename(file_path))[1]))
         file_dict = {
             "full_path": file_path,
             "path": os.path.dirname(file_path),
@@ -33,7 +37,7 @@ class FileService:
             "pages_count": len(pages_list),
             "pages_names": pages_list,
             "current_page": 0,
-            "md5": FileService.calculate_md5(library, file_path)
+            "md5": StorageService(library).calculate_md5(file_path)
         }
         return FileModel(**file_dict)
 
@@ -58,20 +62,6 @@ class FileService:
                 return RarFile
             case _:
                 raise ValueError(f"Invalid file extension: {extension}")
-
-    @staticmethod
-    def get_full_path(library: LibraryModel, file_path: str) -> str:
-        """Get the access path of the file"""
-        return join(library.path, file_path)
-        # if library.connect_type == "local":
-        #     return join(library.path, file_path)
-        # if library.connect_type == "smb":
-        #     return library.path + "\\" + file_path
-
-    @staticmethod
-    def calculate_md5(library: LibraryModel, file_path: str) -> str:
-        """Calculate md5 signature of a file"""
-        return hashlib.md5(pathlib.Path(FileService.get_full_path(library, file_path)).read_bytes()).hexdigest()
 
     @staticmethod
     async def get_file_from_db(library: LibraryModel, file_path: str) -> FileModel:
@@ -117,38 +107,16 @@ class FileService:
         LOGGER.debug("File purge started")
         files = await db_find_all_files(library.name)
         for file in files:
-            if not isfile(FileService.get_full_path(library, file["full_path"])):
+            if not isfile(join(library.path, file["full_path"])):
                 await db_delete_file(library.name, str(file["_id"]))
-                # TODO Find a way to purge thumbnails without circular imports
-                # DirectoryService.delete_thumbnail(library, FileModel(**file))
+                StorageService(library).delete_thumbnail(FileModel(**file))
                 LOGGER.info(f"File {file['name']} purged from library {library.name} because no actual file was found")
         LOGGER.debug("File purge ended")
-
-    # Pages methods
-    @staticmethod
-    def count_pages(library: LibraryModel, file_path: str) -> List[str]:
-        """Create a list of all the pages names in their naming order and count the result"""
-        LOGGER.debug(f"{file_path} : Counting pages")
-        opener_lib = FileService.get_opener_lib(splitext(basename(file_path))[1])
-        pages_names = []
-        with opener_lib(FileService.get_full_path(library, file_path), 'r') as file:
-            for item in file.infolist():
-                if is_image(item.filename):
-                    pages_names.append(item.filename)
-            LOGGER.debug(f"{file_path} : {len(pages_names)} pages")
-            pages_names.sort()
-            return pages_names
 
     @staticmethod
     def get_page(library: LibraryModel, file_data: FileModel, num: int = 0) -> bytes:
         """Get a specific page with a given number"""
-        opener_lib = FileService.get_opener_lib(file_data.extension)
-        with opener_lib(FileService.get_full_path(library, file_data.full_path), 'r') as file:
-            try:
-                with file.open(file_data.pages_names[num]) as img:
-                    return img.read()
-            except Exception as e:
-                print(file_data)  # TODO manage the error when files have 0 pages
+        return StorageService(library).get_page(file_data, FileService.get_opener_lib(file_data.extension), num)
 
     @staticmethod
     def get_current_page(library: LibraryModel, file: FileModel):

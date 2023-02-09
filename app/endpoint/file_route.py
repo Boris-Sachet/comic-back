@@ -1,7 +1,6 @@
-from os.path import isfile
-
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, FileResponse
+from starlette.responses import Response
 from websockets.exceptions import ConnectionClosedOK
 
 from fastapi.websockets import WebSocket
@@ -11,6 +10,7 @@ from app.services.db_service import db_find_file, db_find_library_by_name, db_de
     db_update_file
 from app.services.directory_service import DirectoryService
 from app.services.file_service import FileService
+from app.services.storage_service import StorageService
 
 router = APIRouter(prefix="/file", tags=["File"], responses={404: {"file": "Not found"}})
 
@@ -25,7 +25,7 @@ async def get_library_file(library_name: str, file_id: str):
     if not file:
         raise HTTPException(status_code=404, detail="File not found in database")
 
-    if not isfile(FileService.get_full_path(library, file.full_path)):
+    if not StorageService(library).isfile(file.full_path):
         raise HTTPException(status_code=404, detail="File not found on storage")
 
     return library, file
@@ -38,11 +38,13 @@ def format_file_response(file: FileModel, image_bytes: bytes):
 
 
 @router.get("/{library_name}/{file_id}/cover", response_class=Response)
-async def get_cover(library_name: str, file_id: str) -> FileResponse:
+async def get_cover(library_name: str, file_id: str) -> Response:
     """Get the cover/first page of a file"""
     library, file = await get_library_file(library_name, file_id)
-    if DirectoryService.thumbnail_exist(library, file):
-        return FileResponse(DirectoryService.get_thumbnail_path(library, file))
+    storage_service = StorageService(library)
+    if storage_service.thumbnail_exist(file):
+        thumbnail_response = storage_service.get_thumbnail(file)
+        return thumbnail_response
     raise HTTPException(status_code=404, detail="No cover for this file")
 
 
@@ -96,7 +98,7 @@ async def regenerate_file_data(library_name: str, file_id: str):
     Thumbnail is also regenerated.
     """
     library, file = await get_library_file(library_name, file_id)
-    DirectoryService.delete_thumbnail(library, file)
+    StorageService(library).delete_thumbnail(file)
     await db_delete_file(library.name, str(file.id))
     await DirectoryService.get_dir_content(library, file.path, True)  # Regenerate file in db and thumbnail
     new_file = await db_find_file_by_full_path(library.name, file.full_path)
