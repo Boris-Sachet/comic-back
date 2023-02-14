@@ -16,3 +16,5 @@ class LibraryResponseModel(BaseModel):
     hidden: bool
     connect_type: str
     user: Optional[str]
+    server: Optional[str]
+    service_name: Optional[str]

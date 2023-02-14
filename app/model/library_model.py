@@ -64,6 +64,8 @@ class UpdateLibraryModel(BaseModel):
     path: Optional[str]
     hidden: Optional[bool]
     connect_type: Optional[str]
+    server: Optional[str]
+    service_name: Optional[str]
     user: Optional[str]
     password: Optional[str]
 
@@ -74,12 +76,12 @@ class UpdateLibraryModel(BaseModel):
             raise ValueError(f"connect_type parameter must be {accepted_values}")
         return value
 
-    @root_validator
-    def check_smb_user_pwd(cls, values):
-        if values.get("connect_type") == "smb":
-            if values.get("user") is None or values.get("password") is None:
-                raise ValueError("User and password required for SMB connection")
-        return values
+    # @root_validator
+    # def check_smb_fields(cls, values):
+    #     if values.get("connect_type") == "smb":
+    #         if values.get("user") is None or values.get("password") is None:
+    #             raise ValueError("User and password required for SMB connection")
+    #     return values
 
     class Config:
         # Whether to allow arbitrary user types for fields
