@@ -2,11 +2,10 @@ from datetime import datetime
 import io
 import logging
 import os
-from os.path import join, splitext, basename, isfile
+from os.path import splitext, basename
 from zipfile import ZipFile, BadZipfile
 from rarfile import RarFile, BadRarFile, NotRarFile
-from PIL import Image
-from smb.SMBConnection import SMBConnection
+from PIL import Image, UnidentifiedImageError
 
 from app.enums.type_model import TypeModel
 from app.model.file_model import FileModel, UpdateFileModel
@@ -147,9 +146,16 @@ class FileService:
         return await FileService.set_page(library, file, file.current_page - 1)
 
     @staticmethod
-    def generate_thumbnail_cover(library: LibraryModel, file: FileModel) -> Image:
+    def generate_thumbnail_cover(library: LibraryModel, file: FileModel, storage: StorageService = None) -> Image:
         """Generate a thumbnail cover for the given file"""
-        cover_bytes = FileService.get_page(library, file, 0)
-        cover = Image.open(io.BytesIO(cover_bytes))
-        cover.thumbnail((400, 400))
-        return cover
+        LOGGER.debug(f"Generating thumbnail cover for {file.full_path}")
+        try:
+            cover_bytes = FileService.get_page(library, file, 0, storage)
+            cover = Image.open(io.BytesIO(cover_bytes))
+            cover.thumbnail((400, 400))
+            if cover.mode in ("RGBA", "P"):
+                cover = cover.convert("RGB")
+            return cover
+        except UnidentifiedImageError:
+            LOGGER.error(f"Cannot identify cover image while generating thumbnail for {file.full_path}")
+
