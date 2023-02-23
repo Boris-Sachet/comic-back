@@ -21,11 +21,14 @@ LOGGER = logging.getLogger(__name__)
 
 
 class StorageServiceSmb(StorageService):
+    __con: SMBConnection = None
 
     def __get_smb_conn(self) -> SMBConnection:
-        conn = SMBConnection(**self.library.smb_conn_info())
-        conn.connect(self.library.server, 445)
-        return conn
+        if self.__con is None:
+            conn = SMBConnection(**self.library.smb_conn_info())
+            conn.connect(self.library.server, 445)
+            self.__con = conn
+        return self.__con
 
     def __ensure_directory_exist(self, conn: SMBConnection, path: str):
         try:
@@ -114,13 +117,12 @@ class StorageServiceSmb(StorageService):
         img_io = BytesIO()
         try:
             self.__ensure_directory_exist(conn, self.thumbnail_folder)
-            # conn.createDirectory(self.library.service_name, f"{self.library.path}/.comic-back/thumbnails")
             thumbnail.save(img_io, "JPEG")
             img_io.seek(0)
             conn.storeFile(service_name=self.library.service_name,
                            path=self.get_thumbnail_path(file),
                            file_obj=img_io)
-            LOGGER.info(f"Generated thumbnail for {file.id} {file.path}")
+            LOGGER.info(f"Saved thumbnail for {file.id} {file.full_path}")
         except Exception as e:
             LOGGER.error(f"Can't save thumbnail for {file.id} {file.full_path} : {e}")
 

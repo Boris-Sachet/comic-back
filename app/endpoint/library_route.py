@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 from fastapi import APIRouter, HTTPException
@@ -13,6 +14,8 @@ from app.services.file_service import FileService
 from app.services.library_service import create_library_model
 
 router = APIRouter(prefix="/library", tags=["Library"], responses={404: {"library": "Not found"}})
+LOGGER = logging.getLogger(__name__)
+
 
 
 @router.get("/", response_model=List[LibraryResponseModel])
@@ -73,7 +76,10 @@ async def get_path_content(library_name: str, path: str = ""):
 
 
 @router.get("/{library_name}/scan")
-async def scan_base_directory(library_name: str):
+async def scan_base_directory(library_name: str, purge: bool = False):
     library = await db_find_library_by_name(library_name)
+    LOGGER.info(f"Starting library {library_name} scan")
     await DirectoryService.scan_in_depth(library, "")
-    await FileService.purge_deleted_files(library)
+    LOGGER.info(f"Scan completed for library {library_name} scan")
+    if purge:
+        await FileService.purge_deleted_files(library)

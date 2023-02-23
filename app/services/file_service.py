@@ -20,15 +20,11 @@ LOGGER = logging.getLogger(__name__)
 
 class FileService:
     @staticmethod
-    def __get_smb_conn(library: LibraryModel) -> SMBConnection:
-        conn = SMBConnection(**library.smb_conn_info())
-        conn.connect(library.server, 445)
-        return conn
-
-    @staticmethod
-    def create_file_model(library: LibraryModel, file_path: str):
+    def create_file_model(library: LibraryModel, file_path: str, storage: StorageService = None):
         name, extension = splitext(basename(file_path))
-        pages_list = StorageService(library).list_pages(file_path, FileService.get_opener_lib(splitext(basename(file_path))[1]))
+        if not storage:
+            storage = StorageService(library)
+        pages_list = storage.list_pages(file_path, FileService.get_opener_lib(splitext(basename(file_path))[1]))
         file_dict = {
             "full_path": file_path,
             "path": os.path.dirname(file_path),
@@ -38,7 +34,7 @@ class FileService:
             "pages_count": len(pages_list),
             "pages_names": pages_list,
             "current_page": 0,
-            "md5": StorageService(library).calculate_md5(file_path)
+            "md5": storage.calculate_md5(file_path)
         }
         return FileModel(**file_dict)
 
@@ -65,8 +61,10 @@ class FileService:
                 raise ValueError(f"Invalid file extension: {extension}")
 
     @staticmethod
-    async def get_file_from_db(library: LibraryModel, file_path: str) -> FileModel:
+    async def get_file_from_db(library: LibraryModel, file_path: str, storage: StorageService = None) -> FileModel:
         """Get a file in the database or create it otherwise"""
+        if not storage:
+            storage = StorageService(library)
         # Check if file exist in database with path
         LOGGER.debug(f"Searching for {file_path} existence in database")
         db_file = await db_find_file_by_full_path(library.name, file_path)
@@ -77,7 +75,7 @@ class FileService:
             # File is not found, calculate md5 and search it to make sure the file wasn't moved/renamed
             # Create a new FileModel to avoid recalculating md5 if it doesn't exist in database anyway
             try:
-                file = FileService.create_file_model(library, file_path)
+                file = FileService.create_file_model(library, file_path, storage)
                 LOGGER.debug(f"Searching for {file.name} md5 {file.md5} existence in database")
                 db_file = await db_find_file_by_md5(library.name, file.md5)
                 if file.pages_count == 0:
@@ -102,29 +100,33 @@ class FileService:
                 LOGGER.error(f"Unreadable file : '{file_path}', ignoring file")
 
     @staticmethod
-    async def purge_deleted_files(library: LibraryModel):
+    async def purge_deleted_files(library: LibraryModel, storage: StorageService = None):
         """This method will look at every file reference in database and check if there is an actual file on the
         corresponding path, if no file is found the database entry is removed.
         WARNING: This method is designed to be run just after a scan and might remove wrong data if the database is not
         up-to-date"""
-        LOGGER.debug("File purge started")
+        LOGGER.info("File purge started")
         files = await db_find_all_files(library.name)
+        if not storage:
+            storage = StorageService(library)
         for file in files:
-            if not isfile(join(library.path, file["full_path"])):
+            if not storage.isfile(file["full_path"]):
                 await db_delete_file(library.name, str(file["_id"]))
-                StorageService(library).delete_thumbnail(FileModel(**file))
+                storage.delete_thumbnail(FileModel(**file))
                 LOGGER.info(f"File {file['name']} purged from library {library.name} because no actual file was found")
-        LOGGER.debug("File purge ended")
+        LOGGER.info("File purge ended")
 
     @staticmethod
-    def get_page(library: LibraryModel, file_data: FileModel, num: int = 0) -> bytes:
+    def get_page(library: LibraryModel, file_data: FileModel, num: int = 0, storage: StorageService = None) -> bytes:
         """Get a specific page with a given number"""
-        return StorageService(library).get_page(file_data, FileService.get_opener_lib(file_data.extension), num)
+        if not storage:
+            storage = StorageService(library)
+        return storage.get_page(file_data, FileService.get_opener_lib(file_data.extension), num)
 
     @staticmethod
-    def get_current_page(library: LibraryModel, file: FileModel):
+    def get_current_page(library: LibraryModel, file: FileModel, storage: StorageService = None):
         """Return file data corresponding to the current page number"""
-        return FileService.get_page(library, file, file.current_page)
+        return FileService.get_page(library, file, file.current_page, storage)
 
     @staticmethod
     async def set_page(library: LibraryModel, file: FileModel, num: int) -> FileModel:
