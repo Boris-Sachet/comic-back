@@ -2,15 +2,15 @@ import hashlib
 import logging
 import pathlib
 from os import remove, listdir
-from os.path import join, splitext, basename, isfile
+from os.path import join, isfile
 from typing import List, Type, Tuple
-from zipfile import ZipFile
+from zipfile import ZipFile, BadZipFile
+from rarfile import RarFile, NotRarFile, BadRarFile
 from pathlib import Path
 
 from PIL.Image import Image
-from rarfile import RarFile
 from smb.base import SharedFile
-from starlette.responses import FileResponse
+from fastapi.responses import FileResponse
 
 from app.model.file_model import FileModel
 from app.services.storage_service import StorageService
@@ -22,6 +22,20 @@ LOGGER = logging.getLogger(__name__)
 class StorageServiceLocal(StorageService):
     def calculate_md5(self, file_path: str) -> str:
         return hashlib.md5(pathlib.Path(join(self.library.path, file_path)).read_bytes()).hexdigest()
+
+    def get_opener_lib(self, file_path: str) -> Type[ZipFile | RarFile] | None:
+        # Test if file a zip
+        try:
+            with ZipFile(join(self.library.path, file_path), 'r'):
+                return ZipFile
+        except BadZipFile:
+            pass
+        # Test if file is a rar
+        try:
+            with RarFile(join(self.library.path, file_path), 'r'):
+                return RarFile
+        except (NotRarFile, BadRarFile):
+            pass
 
     def list_pages(self, file_path: str, opener_lib: Type[ZipFile | RarFile]) -> List[str]:
         LOGGER.debug(f"{file_path} : Counting pages")

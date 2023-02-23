@@ -4,10 +4,10 @@ import os.path
 from io import BytesIO
 from os.path import join
 from typing import Type, List, Tuple
-from zipfile import ZipFile
+from zipfile import ZipFile, BadZipFile
 
 from PIL.Image import Image
-from rarfile import RarFile
+from rarfile import RarFile, NotRarFile, BadRarFile
 from smb.SMBConnection import SMBConnection
 from smb.base import SharedFile
 from smb.smb_structs import OperationFailure
@@ -54,6 +54,24 @@ class StorageServiceSmb(StorageService):
                 hasher.update(chunk)
             LOGGER.debug(f"{file_path} : md5 is {hasher.hexdigest()}")
             return hasher.hexdigest()
+
+    def get_opener_lib(self, file_path: str) -> Type[ZipFile | RarFile] | None:
+        conn = self.__get_smb_conn()
+        with BytesIO() as file_io:
+            conn.retrieveFile(service_name=self.library.service_name, path=join(self.library.path, file_path), file_obj=file_io)
+            file_io.seek(0)
+            # Test if file a zip
+            try:
+                with ZipFile(join(self.library.path, file_path), 'r'):
+                    return ZipFile
+            except BadZipFile:
+                pass
+            # Test if file is a rar
+            try:
+                with RarFile(join(self.library.path, file_path), 'r'):
+                    return RarFile
+            except (NotRarFile, BadRarFile):
+                pass
 
     def list_pages(self, file_path: str, opener_lib: Type[ZipFile | RarFile]) -> List[str]:
         LOGGER.debug(f"{file_path} : Counting pages")

@@ -30,6 +30,10 @@ class StorageService:
         """Calculate md5 signature of a file"""
         pass
 
+    def get_opener_lib(self, file_path: str) -> Type[ZipFile | RarFile] | None:
+        """Test the file directly to see which library can open it"""
+        pass
+
     # @abstractmethod
     def list_pages(self, file_path: str, opener_lib: Type[ZipFile | RarFile]) -> List[str]:
         """Create a sorted list of all the pages names in their naming order and count the result"""

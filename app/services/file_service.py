@@ -23,7 +23,7 @@ class FileService:
         name, extension = splitext(basename(file_path))
         if not storage:
             storage = StorageService(library)
-        pages_list = storage.list_pages(file_path, FileService.get_opener_lib(splitext(basename(file_path))[1]))
+        pages_list = storage.list_pages(file_path, FileService.get_opener_lib(file_path, storage))
         file_dict = {
             "full_path": file_path,
             "path": os.path.dirname(file_path),
@@ -49,15 +49,19 @@ class FileService:
                 return await FileService.set_page(library, file, int(action))
 
     @staticmethod
-    def get_opener_lib(extension: str):
+    def get_opener_lib(file_path: str, storage: StorageService):
+    # def get_opener_lib(extension: str):
         """Find the library needed to open the file based on it's extension"""
-        match extension.lower():
-            case ".cbz":
-                return ZipFile
-            case ".cbr":
-                return RarFile
-            case _:
-                raise ValueError(f"Invalid file extension: {extension}")
+        # match extension.lower():
+        #     case ".cbz":
+        #         return ZipFile
+        #     case ".cbr":
+        #         return RarFile
+        #     case _:
+        #         raise ValueError(f"Invalid file extension: {splitext(basename(file_path))[1]}")
+        if opener_lib := storage.get_opener_lib(file_path):
+            return opener_lib
+        raise ValueError(f"Invalid file extension: {splitext(basename(file_path))[1]}")
 
     @staticmethod
     async def get_file_from_db(library: LibraryModel, file_path: str, storage: StorageService = None) -> FileModel:
@@ -97,6 +101,8 @@ class FileService:
                         return await db_update_file(library.name, str(db_file.id), file_updated)
             except (BadZipfile, BadRarFile, NotRarFile):
                 LOGGER.error(f"Unreadable file : '{file_path}', ignoring file")
+            except ValueError as e:
+                LOGGER.error(str(e))
 
     @staticmethod
     async def purge_deleted_files(library: LibraryModel, storage: StorageService = None):
@@ -116,11 +122,11 @@ class FileService:
         LOGGER.info("File purge ended")
 
     @staticmethod
-    def get_page(library: LibraryModel, file_data: FileModel, num: int = 0, storage: StorageService = None) -> bytes:
+    def get_page(library: LibraryModel, file: FileModel, num: int = 0, storage: StorageService = None) -> bytes:
         """Get a specific page with a given number"""
         if not storage:
             storage = StorageService(library)
-        return storage.get_page(file_data, FileService.get_opener_lib(file_data.extension), num)
+        return storage.get_page(file, FileService.get_opener_lib(file.full_path, storage), num)
 
     @staticmethod
     def get_current_page(library: LibraryModel, file: FileModel, storage: StorageService = None):

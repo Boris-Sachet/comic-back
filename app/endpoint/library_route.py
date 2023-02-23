@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 from fastapi import APIRouter, HTTPException
-from starlette import status
+from fastapi import status
 
 from app.endpoint.base_models.custom_response_models import LibContentResponseModel, LibraryResponseModel
 
@@ -15,7 +15,6 @@ from app.services.library_service import create_library_model
 
 router = APIRouter(prefix="/library", tags=["Library"], responses={404: {"library": "Not found"}})
 LOGGER = logging.getLogger(__name__)
-
 
 
 @router.get("/", response_model=List[LibraryResponseModel])
