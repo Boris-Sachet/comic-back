@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response, FileResponse
 from starlette.responses import Response
 from websockets.exceptions import ConnectionClosedOK
 

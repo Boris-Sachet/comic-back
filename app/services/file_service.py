@@ -1,3 +1,4 @@
+from datetime import datetime
 import io
 import logging
 import os
@@ -84,6 +85,8 @@ class FileService:
                 else:
                     if not db_file:
                         # If file isn't found by md5, add a new entry in the database
+                        file.add_date = datetime.now()
+                        file.update_date = file.add_date
                         insert_result = await db_insert_file(library.name, file)
                         LOGGER.info(f"{file.full_path} : added new entry in database {insert_result.inserted_id}")
                         return await db_find_file(library.name, insert_result.inserted_id)
@@ -127,7 +130,8 @@ class FileService:
     async def set_page(library: LibraryModel, file: FileModel, num: int) -> FileModel:
         """Set the current page of a file in the database and return the updated FileModel object"""
         if 0 <= num <= file.pages_count - 1:
-            return await db_update_file(library.name, str(file.id), UpdateFileModel(**{"current_page": num}))
+            return await db_update_file(library.name, str(file.id), UpdateFileModel(
+                **{"current_page": num, "update_date": datetime.now()}))
         return file
 
     @staticmethod

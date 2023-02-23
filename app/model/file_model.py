@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from os.path import splitext, basename
 from typing import Optional, List
@@ -19,6 +20,8 @@ class FileModel(BaseModel):
     pages_names: List[str] = Field(...)
     current_page: int = Field(...)
     md5: str = Field(...)
+    add_date: Optional[datetime]
+    update_date: Optional[datetime]
 
     @validator("path", "full_path")
     def trim_path(cls, value: str):
@@ -45,6 +48,8 @@ class UpdateFileModel(BaseModel):
     pages_names: Optional[List[str]]
     current_page: Optional[int]
     md5: Optional[str]
+    add_date: Optional[datetime]
+    update_date: Optional[datetime]
 
     class Config:
         # Whether to allow arbitrary user types for fields
@@ -70,6 +75,8 @@ class ResponseFileModel(BaseModel):
     type: str = Field(...)
     pages_count: int = Field(...)
     current_page: int = Field(...)
+    add_date: Optional[datetime]
+    update_date: Optional[datetime]
 
     class Config:
         json_encoders = {ObjectId: str}
