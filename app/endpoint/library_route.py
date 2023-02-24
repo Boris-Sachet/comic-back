@@ -68,7 +68,7 @@ async def get_path_content(library_name: str, path: str = ""):
     if path.startswith("\\") or path.startswith("/"):
         path = path.lstrip(path[0])
     try:
-        result = await DirectoryService.get_dir_content(library, path, True)
+        result = await DirectoryService.get_dir_content(library, path, generate_thumbnails=True, dir_thumbnail=True)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Folder {path} not found")
     return result

@@ -1,5 +1,7 @@
+import re
 from typing import List
 
+import pymongo
 from bson import ObjectId
 from fastapi import HTTPException
 
@@ -46,6 +48,16 @@ async def db_find_file_by_md5(library_name: str, md5: str) -> FileModel | None:
 async def db_find_all_files(library_name: str) -> List[dict]:
     """Get a list of all files in library"""
     return await db[library_name].find().to_list(None)
+
+
+async def db_find_first_child_in_path(library_name: str, dir_path) -> FileModel | None:
+    """Find the first file in a directory, or it's sub-dirs"""
+    pattern = re.compile(rf'^{dir_path}.*')
+    file_dict = await db[library_name].find_one(
+        {"path": {"$regex": pattern}}, sort=[('path', pymongo.ASCENDING), ('name', pymongo.ASCENDING)])
+    if file_dict is not None:
+        return FileModel(**file_dict)
+    return None
 
 
 async def db_insert_file(library_name: str, file: FileModel):
