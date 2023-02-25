@@ -52,9 +52,15 @@ async def db_find_all_files(library_name: str) -> List[dict]:
 
 async def db_find_first_child_in_path(library_name: str, dir_path) -> FileModel | None:
     """Find the first file in a directory, or it's sub-dirs"""
-    pattern = re.compile(rf'^{dir_path}.*')
+    # Search in direct folder children first
     file_dict = await db[library_name].find_one(
-        {"path": {"$regex": pattern}}, sort=[('path', pymongo.ASCENDING), ('name', pymongo.ASCENDING)])
+        {"path": dir_path}, sort=[('path', pymongo.ASCENDING), ('name', pymongo.ASCENDING)])
+    # If not found look in sub-folders
+    if file_dict is None:
+        dir_path = re.escape(dir_path + "/")
+        pattern = re.compile(rf'^{dir_path}.*')
+        file_dict = await db[library_name].find_one(
+            {"path": {"$regex": pattern}}, sort=[('path', pymongo.ASCENDING), ('name', pymongo.ASCENDING)])
     if file_dict is not None:
         return FileModel(**file_dict)
     return None
