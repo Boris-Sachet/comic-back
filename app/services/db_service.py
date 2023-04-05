@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timedelta
 from typing import List
 
 import pymongo
@@ -64,6 +65,42 @@ async def db_find_first_child_in_path(library_name: str, dir_path) -> FileModel 
     if file_dict is not None:
         return FileModel(**file_dict)
     return None
+
+
+async def db_find_last_ongoing(library_name: str, limit: int) -> List[FileModel]:
+    """Find the last updated files that have current_page > 0 and current_page != pages_count -1."""
+    query = {
+        "current_page": {"$gt": 0, "$ne": "None"},
+        "$expr": {"$lt": ["$current_page", {"$subtract": ["$pages_count", 1]}]}
+    }
+    cursor = db[library_name].find(query).sort([("update_date", pymongo.DESCENDING)]).limit(limit)
+    latest_files = []
+    async for document in cursor:
+        latest_files.append(FileModel(**document))
+    return latest_files
+
+
+async def db_find_last_added(library_name: str, limit: int) -> List[FileModel]:
+    """Find the last added files in the database."""
+    cursor = db[library_name].find({}).sort([("add_date", pymongo.DESCENDING)]).limit(limit)
+    latest_files = []
+    async for document in cursor:
+        latest_files.append(FileModel(**document))
+    return latest_files
+
+
+async def db_find_last_added_by_days(library_name: str, days: int, limit: int = None) -> List[FileModel]:
+    """Find files added in the last `days` days."""
+    date_threshold = datetime.now() - timedelta(days=days)
+    query = {"add_date": {"$gt": date_threshold}}
+    if limit is not None:
+        cursor = db[library_name].find(query).sort([("add_date", pymongo.DESCENDING)]).limit(limit)
+    else:
+        cursor = db[library_name].find(query).sort([("add_date", pymongo.DESCENDING)])
+    latest_files = []
+    async for document in cursor:
+        latest_files.append(FileModel(**document))
+    return latest_files
 
 
 async def db_insert_file(library_name: str, file: FileModel):

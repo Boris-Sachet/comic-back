@@ -5,10 +5,12 @@ from fastapi import APIRouter, HTTPException
 from fastapi import status
 
 from app.endpoint.base_models.custom_response_models import LibContentResponseModel, LibraryResponseModel
+from app.model.file_model import ResponseFileModel
 
 from app.model.library_model import UpdateLibraryModel, LibraryModel
 from app.services.db_service import db_find_all_libraries, db_find_library_by_name, db_insert_library, \
-    db_delete_library, db_update_library, db_remove_collection
+    db_delete_library, db_update_library, db_remove_collection, db_find_last_ongoing, db_find_last_added, \
+    db_find_last_added_by_days
 from app.services.directory_service import DirectoryService
 from app.services.file_service import FileService
 from app.services.library_service import create_library_model
@@ -72,6 +74,21 @@ async def get_path_content(library_name: str, path: str = ""):
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Folder {path} not found")
     return result
+
+
+@router.get("/{library_name}/last_ongoing", response_model=List[ResponseFileModel])
+async def get_last_ongoing_files(library_name: str, limit: int = 10):
+    return await db_find_last_ongoing(library_name, limit)
+
+
+@router.get("/{library_name}/last_added", response_model=List[ResponseFileModel])
+async def get_last_added(library_name: str, limit: int = 10):
+    return await db_find_last_added(library_name, limit)
+
+
+@router.get("/{library_name}/last_added_since", response_model=List[ResponseFileModel])
+async def get_last_since(library_name: str, days: int = 15, limit: int = None):
+    return await db_find_last_added_by_days(library_name, days, limit)
 
 
 @router.get("/{library_name}/scan")
