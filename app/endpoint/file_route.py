@@ -101,7 +101,8 @@ async def regenerate_file_data(library_name: str, file_id: str):
     await db_delete_file(library.name, str(file.id))
     await DirectoryService.get_dir_content(library, file.path, True)  # Regenerate file in db and thumbnail
     new_file = await db_find_file_by_full_path(library.name, file.full_path)
-    return await db_update_file(library.name, str(new_file.id), UpdateFileModel(current_page=file.current_page))
+    return await db_update_file(library.name, str(new_file.id), UpdateFileModel(
+        current_page=file.current_page, add_date=file.add_date, update_date=file.update_date))
 
 
 @router.websocket("/")
