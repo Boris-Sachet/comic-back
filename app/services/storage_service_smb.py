@@ -72,6 +72,7 @@ class StorageServiceSmb(StorageService):
                     return RarFile
             except (NotRarFile, BadRarFile):
                 pass
+        LOGGER.error(f"No opener lib found for {file_path}")
 
     def list_pages(self, file_path: str, opener_lib: Type[ZipFile | RarFile]) -> List[str]:
         LOGGER.debug(f"{file_path} : Counting pages")
@@ -101,7 +102,7 @@ class StorageServiceSmb(StorageService):
                     with storage_file.open(file.pages_names[num]) as img:
                         return img.read()
                 except Exception as e:
-                    LOGGER.error(file, e)  # TODO manage the error when files have 0 pages
+                    LOGGER.exception(f"{file.full_path} : can't get page {num}", exc_info=e)  # TODO manage the error when files have 0 pages
 
     def isfile(self, file: str | SharedFile) -> bool:
         if type(file) == SharedFile:
@@ -142,7 +143,7 @@ class StorageServiceSmb(StorageService):
                            file_obj=img_io)
             LOGGER.info(f"Saved thumbnail for {file.id} {file.full_path}")
         except Exception as e:
-            LOGGER.error(f"Can't save thumbnail for {file.id} {file.full_path} : {e}")
+            LOGGER.exception(f"Can't save thumbnail for {file.id} {file.full_path} : {e}", exc_info=e)
 
     def thumbnail_exist(self, file: FileModel) -> bool:
         conn = self.__get_smb_conn()

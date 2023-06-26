@@ -21,7 +21,9 @@ LOGGER = logging.getLogger(__name__)
 
 class StorageServiceLocal(StorageService):
     def calculate_md5(self, file_path: str) -> str:
-        return hashlib.md5(pathlib.Path(join(self.library.path, file_path)).read_bytes()).hexdigest()
+        md5 = hashlib.md5(pathlib.Path(join(self.library.path, file_path)).read_bytes()).hexdigest()
+        LOGGER.debug(f"{file_path} : md5 is {md5}")
+        return md5
 
     def get_opener_lib(self, file_path: str) -> Type[ZipFile | RarFile] | None:
         # Test if file a zip
@@ -36,6 +38,7 @@ class StorageServiceLocal(StorageService):
                 return RarFile
         except (NotRarFile, BadRarFile):
             pass
+        LOGGER.error(f"No opener lib found for {file_path}")
 
     def list_pages(self, file_path: str, opener_lib: Type[ZipFile | RarFile]) -> List[str]:
         LOGGER.debug(f"{file_path} : Counting pages")
@@ -49,12 +52,13 @@ class StorageServiceLocal(StorageService):
             return pages_names
 
     def get_page(self, file: FileModel, opener_lib: Type[ZipFile | RarFile], num: int = 0) -> bytes:
+        LOGGER.debug(f"{file.full_path} : getting page {num}")
         with opener_lib(join(self.library.path, file.full_path), 'r') as storage_file:
             try:
                 with storage_file.open(file.pages_names[num]) as img:
                     return img.read()
             except Exception as e:
-                LOGGER.error(file, e)  # TODO manage the error when files have 0 pages
+                LOGGER.exception(f"{file.full_path} : can't get page {num}", exc_info=e)  # TODO manage the error when files have 0 pages
 
     def isfile(self, file: str | SharedFile) -> bool:
         return isfile(join(self.library.path, file))
@@ -76,7 +80,7 @@ class StorageServiceLocal(StorageService):
             thumbnail.save(self.get_thumbnail_path(file))
             LOGGER.info(f"Generated thumbnail for {file.id} {file.path}")
         except Exception as e:
-            LOGGER.error(f"Can't save thumbnail for {file.id} {file.full_path} : {e}")
+            LOGGER.exception(f"Can't save thumbnail for {file.id} {file.full_path} : {e}", exc_info=e)
 
     def thumbnail_exist(self, file: FileModel) -> bool:
         return self.isfile(join(self.library.path, self.get_thumbnail_path(file)))

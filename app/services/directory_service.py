@@ -45,12 +45,15 @@ class DirectoryService:
                         thumbnail = FileService.generate_thumbnail_cover(library, db_file, storage)
                         if thumbnail:
                             storage.save_thumbnail(db_file, thumbnail)
+        LOGGER.info(f"Get dir content found {len(files)} files and {len(dirs)} directories in {path} of library {library}")
         return dirs, files
 
     @classmethod
     async def scan_in_depth(cls, library: LibraryModel, path: str, storage: StorageService = None):
-        """Use in depth scanning to go to every folder and sub-folder and analyse the files to make sure they're referenced
-        in database or add them if they're not"""
+        """
+        Use in depth scanning to go to every folder and sub-folder and analyse the files to make sure they're referenced
+        in database or add them if they're not
+        """
         if not storage:
             storage = StorageService(library)
         # Scan base dir

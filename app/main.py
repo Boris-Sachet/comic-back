@@ -2,9 +2,7 @@ import logging.config
 
 from fastapi import FastAPI
 
-# log_file_path = path.join(path.dirname(path.abspath(__file__)), 'logging.conf')
-# logging.config.fileConfig(log_file_path)
-
+import loging_config  # noqa: F401
 from app.endpoint import file_route, library_route, root_route
 
 LOGGER = logging.getLogger(__name__)
@@ -15,5 +13,4 @@ app.include_router(root_route.router)
 app.include_router(file_route.router)
 app.include_router(library_route.router)
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 LOGGER.info("app is running")

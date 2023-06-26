@@ -50,7 +50,6 @@ class FileService:
 
     @staticmethod
     def get_opener_lib(file_path: str, storage: StorageService):
-    # def get_opener_lib(extension: str):
         """Find the library needed to open the file based on it's extension"""
         # match extension.lower():
         #     case ".cbz":

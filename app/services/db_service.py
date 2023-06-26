@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import datetime, timedelta
 from typing import List
@@ -10,12 +11,15 @@ from app.database_connect import db
 from app.model.file_model import FileModel, UpdateFileModel
 from app.model.library_model import LibraryModel, UpdateLibraryModel
 
+LOGGER = logging.getLogger(__name__)
+
 
 # ===========================
 # COLLECTION SPECIFIC METHODS
 # ===========================
 async def db_remove_collection(collection_name: str):
     """Delete a database collection"""
+    LOGGER.info(f"Dropping collection: {collection_name}")
     return await db[collection_name].drop()
 
 
@@ -26,7 +30,9 @@ async def db_find_file(library_name: str, object_id: str) -> FileModel | None:
     """Find a file in a library by id"""
     file_dict = await db[library_name].find_one({"_id": ObjectId(object_id)})
     if file_dict is not None:
+        LOGGER.debug(f"File id '{file_dict['full_path']}' found in database library {library_name}")
         return FileModel(**file_dict)
+    LOGGER.error(f"File id '{object_id}' not found in database library {library_name}")
     return None
 
 
@@ -34,7 +40,9 @@ async def db_find_file_by_full_path(library_name: str, file_path: str) -> FileMo
     """Find a file in a library by full path"""
     file_dict = await db[library_name].find_one({"full_path": file_path})
     if file_dict is not None:
+        LOGGER.debug(f"File full path '{file_dict['full_path']}' found in database library {library_name}")
         return FileModel(**file_dict)
+    LOGGER.error(f"File full path '{file_path}' not found in database library {library_name}")
     return None
 
 
@@ -42,16 +50,19 @@ async def db_find_file_by_md5(library_name: str, md5: str) -> FileModel | None:
     """Find a file in a library by md5"""
     file_dict = await db[library_name].find_one({"md5": md5})
     if file_dict is not None:
+        LOGGER.debug(f"File md5 '{file_dict['full_path']}' found in database library {library_name}")
         return FileModel(**file_dict)
+    LOGGER.error(f"File md5 '{md5}' not found in database library {library_name}")
     return None
 
 
 async def db_find_all_files(library_name: str) -> List[dict]:
     """Get a list of all files in library"""
+    LOGGER.debug(f"Listing all files in library {library_name}")
     return await db[library_name].find().to_list(None)
 
 
-async def db_find_first_child_in_path(library_name: str, dir_path) -> FileModel | None:
+async def db_find_first_child_in_path(library_name: str, dir_path: str) -> FileModel | None:
     """Find the first file in a directory, or it's sub-dirs"""
     # Search in direct folder children first
     file_dict = await db[library_name].find_one(
@@ -63,7 +74,9 @@ async def db_find_first_child_in_path(library_name: str, dir_path) -> FileModel 
         file_dict = await db[library_name].find_one(
             {"path": {"$regex": pattern}}, sort=[('path', pymongo.ASCENDING), ('name', pymongo.ASCENDING)])
     if file_dict is not None:
+        LOGGER.debug(f"First file for path {dir_path} in library {library_name} is {file_dict['full_path']}")
         return FileModel(**file_dict)
+    LOGGER.info(f"Path {dir_path} in library {library_name} has no files")
     return None
 
 
@@ -74,10 +87,11 @@ async def db_find_last_ongoing(library_name: str, limit: int) -> List[FileModel]
         "$expr": {"$lt": ["$current_page", {"$subtract": ["$pages_count", 1]}]}
     }
     cursor = db[library_name].find(query).sort([("update_date", pymongo.DESCENDING)]).limit(limit)
-    latest_files = []
+    ongoing_files = []
     async for document in cursor:
-        latest_files.append(FileModel(**document))
-    return latest_files
+        ongoing_files.append(FileModel(**document))
+    LOGGER.info(f"Found {len(ongoing_files)} ongoing files in library {library_name}, limited to {limit}")
+    return ongoing_files
 
 
 async def db_find_last_added(library_name: str, limit: int) -> List[FileModel]:
@@ -86,6 +100,7 @@ async def db_find_last_added(library_name: str, limit: int) -> List[FileModel]:
     latest_files = []
     async for document in cursor:
         latest_files.append(FileModel(**document))
+    LOGGER.info(f"Found {len(latest_files)} recently added files in library {library_name}, limited to {limit}")
     return latest_files
 
 
@@ -100,6 +115,7 @@ async def db_find_last_added_by_days(library_name: str, days: int, limit: int = 
     latest_files = []
     async for document in cursor:
         latest_files.append(FileModel(**document))
+    LOGGER.info(f"Found {len(latest_files)} files added in the last {days} in library {library_name}, limited to {limit}")
     return latest_files
 
 
