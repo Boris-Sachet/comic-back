@@ -1,4 +1,4 @@
-import logging.config
+import logging
 
 from fastapi import FastAPI
 
