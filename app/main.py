@@ -2,7 +2,7 @@ import logging
 
 from fastapi import FastAPI
 
-import loging_config  # noqa: F401
+from app import loging_config  # noqa: F401
 from app.endpoint import file_route, library_route, root_route
 
 LOGGER = logging.getLogger(__name__)
